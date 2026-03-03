@@ -228,7 +228,7 @@ const Planning = () => {
       <div className="pt-20 pb-12 px-6">
         <div className="container mx-auto max-w-lg mb-8">
           <div className="flex gap-2">
-            {[0, 1, 2, 3].map((i) => (
+            {[0, 1, 2, 3, 4].map((i) => (
               <div key={i} className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${i <= step ? "bg-chip-orange" : "bg-border"}`} />
             ))}
           </div>
@@ -254,7 +254,7 @@ const Planning = () => {
               <Button variant="ghost" onClick={() => setStep((s) => s - 1)} disabled={step === 0}>
                 <ArrowLeft className="w-4 h-4" /> Quay lại
               </Button>
-              {step < 3 ? (
+              {step < 4 ? (
                 <Button variant="hero" onClick={() => setStep((s) => s + 1)} disabled={!canNext()}>
                   Tiếp theo <ArrowRight className="w-4 h-4" />
                 </Button>

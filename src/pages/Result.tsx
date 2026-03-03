@@ -84,6 +84,37 @@ const Result = () => {
     }
   };
 
+  const handleClone = () => {
+    const cloned: TripPlan = { ...trip, id: Date.now().toString(), title: trip.title + " (bản sao)" };
+    saveTrip(cloned);
+    toast.success("Đã clone lịch trình!", {
+      description: "Bản sao đã được lưu vào \"Chuyến đi của tôi\"",
+      action: { label: "Xem ngay", onClick: () => navigate("/saved") },
+    });
+  };
+
+  const handleDeleteItem = (dayIdx: number, itemIdx: number) => {
+    setTrip(prev => ({
+      ...prev,
+      days: prev.days.map((day, di) =>
+        di === dayIdx ? { ...day, items: day.items.filter((_, ii) => ii !== itemIdx) } : day
+      ),
+    }));
+    toast.success("Đã xóa hoạt động");
+  };
+
+  const handleMoveItem = (dayIdx: number, itemIdx: number, direction: "up" | "down") => {
+    setTrip(prev => {
+      const newDays = [...prev.days];
+      const items = [...newDays[dayIdx].items];
+      const targetIdx = direction === "up" ? itemIdx - 1 : itemIdx + 1;
+      if (targetIdx < 0 || targetIdx >= items.length) return prev;
+      [items[itemIdx], items[targetIdx]] = [items[targetIdx], items[itemIdx]];
+      newDays[dayIdx] = { ...newDays[dayIdx], items };
+      return { ...prev, days: newDays };
+    });
+  };
+
   // Calculate detailed costs
   const allItems = trip.days.flatMap(d => d.items);
   const costBreakdown = allItems.reduce((sum, item) => {

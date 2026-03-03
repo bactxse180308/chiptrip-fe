@@ -1,44 +1,51 @@
+import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { MapPin, Clock, Wallet, Star, Bookmark, Share2, Crown } from "lucide-react";
+import { MapPin, Clock, Wallet, Star, Bookmark, Share2, Crown, Check } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 import Navbar from "@/components/Navbar";
-import tripDanang from "@/assets/trip-danang.jpg";
-import tripHoian from "@/assets/trip-hoian.jpg";
-import tripSapa from "@/assets/trip-sapa.jpg";
-
-const itinerary = [
-  {
-    day: "Ngày 1",
-    date: "15/03/2026",
-    items: [
-      { time: "08:00", title: "Checkin khách sạn Mường Thanh", desc: "Nghỉ ngơi, chuẩn bị", cost: "800K", image: tripDanang },
-      { time: "10:30", title: "Tham quan Bà Nà Hills", desc: "Cầu Vàng, Fantasy Park", cost: "900K", image: tripDanang },
-      { time: "12:30", title: "Ăn trưa hải sản Mỹ Khê", desc: "Quán bà Tư - Đặc sản ghẹ hấp", cost: "350K", image: tripHoian },
-      { time: "15:00", title: "Uống cafe Son Trà", desc: "View biển cực đẹp", cost: "80K", image: tripSapa },
-    ],
-  },
-  {
-    day: "Ngày 2",
-    date: "16/03/2026",
-    items: [
-      { time: "07:00", title: "Bình minh tại Bãi Mỹ Khê", desc: "Chạy bộ + check-in sống ảo", cost: "Miễn phí", image: tripDanang },
-      { time: "09:00", title: "Đi phố cổ Hội An", desc: "Dạo phố, mua quà lưu niệm", cost: "200K", image: tripHoian },
-      { time: "12:00", title: "Ăn Cao lầu & Mì Quảng", desc: "Quán bà Liên - Phố cổ", cost: "120K", image: tripHoian },
-      { time: "19:00", title: "Thả đèn hoa đăng", desc: "Trải nghiệm văn hóa Hội An", cost: "50K", image: tripHoian },
-    ],
-  },
-  {
-    day: "Ngày 3",
-    date: "17/03/2026",
-    items: [
-      { time: "08:00", title: "Chùa Linh Ứng Sơn Trà", desc: "Tượng Phật Quan Âm cao nhất VN", cost: "Miễn phí", image: tripSapa },
-      { time: "11:00", title: "Bảo tàng Chăm", desc: "Tìm hiểu văn hóa Chăm Pa", cost: "60K", image: tripDanang },
-      { time: "14:00", title: "Mua sắm tại chợ Hàn", desc: "Đặc sản, quà lưu niệm", cost: "500K", image: tripHoian },
-    ],
-  },
-];
+import { generateTrip, saveTrip, type TripPlan, type TripItem } from "@/lib/trip-data";
 
 const Result = () => {
+  const navigate = useNavigate();
+  const { state } = useLocation();
+  const [saved, setSaved] = useState(false);
+
+  // Use passed trip or generate default
+  const trip: TripPlan = state?.trip || generateTrip("Đà Nẵng", "2026-03-15", "2026-03-17", 3, []);
+
+  const handleSave = () => {
+    saveTrip(trip);
+    setSaved(true);
+    toast.success("Đã lưu kế hoạch!", {
+      description: "Xem lại trong \"Chuyến đi của tôi\"",
+      action: { label: "Xem ngay", onClick: () => navigate("/saved") },
+    });
+  };
+
+  const handleShare = async () => {
+    const shareData = {
+      title: trip.title,
+      text: `Xem lịch trình ${trip.title} trên Chip Trip! 🐥`,
+      url: window.location.href,
+    };
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(`${shareData.text}\n${shareData.url}`);
+        toast.success("Đã sao chép link!");
+      }
+    } catch {
+      // User cancelled share
+    }
+  };
+
+  const handleItemClick = (item: TripItem) => {
+    navigate("/location", { state: { item } });
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -49,34 +56,15 @@ const Result = () => {
             <div className="lg:col-span-2">
               <div className="sticky top-24">
                 <div className="rounded-2xl overflow-hidden border border-border bg-card shadow-card h-[70vh]">
-                  {/* Simulated map */}
-                  <div className="relative w-full h-full bg-muted">
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="text-center space-y-4">
-                        <div className="w-16 h-16 rounded-full bg-gradient-accent mx-auto flex items-center justify-center">
-                          <MapPin className="w-8 h-8 text-accent-foreground" />
-                        </div>
-                        <p className="text-muted-foreground font-medium">Bản đồ lịch trình</p>
-                        <p className="text-sm text-muted-foreground">Đà Nẵng - Hội An</p>
-                      </div>
-                    </div>
-                    {/* Simulated pins */}
-                    {[
-                      { top: "20%", left: "30%", n: 1 },
-                      { top: "35%", left: "55%", n: 2 },
-                      { top: "50%", left: "40%", n: 3 },
-                      { top: "65%", left: "60%", n: 4 },
-                      { top: "75%", left: "35%", n: 5 },
-                    ].map((pin) => (
-                      <div
-                        key={pin.n}
-                        className="absolute w-8 h-8 rounded-full bg-chip-orange flex items-center justify-center text-accent-foreground text-sm font-bold shadow-warm"
-                        style={{ top: pin.top, left: pin.left }}
-                      >
-                        {pin.n}
-                      </div>
-                    ))}
-                  </div>
+                  <iframe
+                    title="Bản đồ lịch trình"
+                    width="100%"
+                    height="100%"
+                    style={{ border: 0 }}
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                    src={`https://www.google.com/maps/embed/v1/search?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q=${encodeURIComponent(trip.destination + " du lịch")}&zoom=12`}
+                  />
                 </div>
               </div>
             </div>
@@ -89,24 +77,32 @@ const Result = () => {
                 animate={{ opacity: 1, y: 0 }}
                 className="bg-card rounded-2xl p-6 border border-border shadow-card"
               >
-                <div className="flex items-start justify-between">
+                <div className="flex items-start justify-between flex-wrap gap-4">
                   <div>
-                    <h1 className="text-2xl font-bold text-foreground">Đà Nẵng - Hội An 3N2Đ 🏖️</h1>
-                    <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                      <span className="flex items-center gap-1"><Clock className="w-4 h-4" /> 3 ngày 2 đêm</span>
-                      <span className="flex items-center gap-1"><Wallet className="w-4 h-4" /> ~3.06M VNĐ</span>
-                      <span className="flex items-center gap-1"><Star className="w-4 h-4 text-chip-yellow" /> 4.8</span>
+                    <h1 className="text-2xl font-bold text-foreground">{trip.title} 🏖️</h1>
+                    <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground flex-wrap">
+                      <span className="flex items-center gap-1"><Clock className="w-4 h-4" /> {trip.duration}</span>
+                      <span className="flex items-center gap-1"><Wallet className="w-4 h-4" /> {trip.totalCost} VNĐ</span>
+                      <span className="flex items-center gap-1"><Star className="w-4 h-4 text-chip-yellow" /> {trip.rating}</span>
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="soft" size="sm"><Share2 className="w-4 h-4" /></Button>
-                    <Button variant="hero" size="sm"><Bookmark className="w-4 h-4" /> Lưu kế hoạch</Button>
+                    <Button variant="soft" size="sm" onClick={handleShare}><Share2 className="w-4 h-4" /></Button>
+                    <Button
+                      variant={saved ? "soft" : "hero"}
+                      size="sm"
+                      onClick={handleSave}
+                      disabled={saved}
+                    >
+                      {saved ? <Check className="w-4 h-4" /> : <Bookmark className="w-4 h-4" />}
+                      {saved ? "Đã lưu" : "Lưu kế hoạch"}
+                    </Button>
                   </div>
                 </div>
               </motion.div>
 
               {/* Timeline */}
-              {itinerary.map((day, dayIdx) => (
+              {trip.days.map((day, dayIdx) => (
                 <motion.div
                   key={day.day}
                   initial={{ opacity: 0, y: 20 }}
@@ -123,7 +119,11 @@ const Result = () => {
 
                   <div className="space-y-3 pl-4 border-l-2 border-chip-orange/20 ml-4">
                     {day.items.map((item, idx) => (
-                      <div key={idx} className="relative flex gap-4 bg-card rounded-xl p-4 border border-border shadow-card hover:shadow-warm transition-shadow ml-4">
+                      <div
+                        key={idx}
+                        onClick={() => handleItemClick(item)}
+                        className="relative flex gap-4 bg-card rounded-xl p-4 border border-border shadow-card hover:shadow-warm transition-all ml-4 cursor-pointer hover:-translate-y-0.5"
+                      >
                         <div className="absolute -left-[1.6rem] top-5 w-3 h-3 rounded-full bg-chip-orange border-2 border-background" />
                         <img src={item.image} alt={item.title} className="w-16 h-16 rounded-xl object-cover flex-shrink-0" />
                         <div className="flex-1 min-w-0">

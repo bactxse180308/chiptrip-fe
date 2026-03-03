@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import Planning from "./pages/Planning";
 import Result from "./pages/Result";
 import SavedPlans from "./pages/SavedPlans";
+import LocationDetail from "./pages/LocationDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();

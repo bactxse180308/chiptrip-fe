@@ -1,9 +1,11 @@
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { MapPin, User } from "lucide-react";
+import { MapPin, User, Zap } from "lucide-react";
+import { getCredits } from "@/lib/trip-data";
 
 const Navbar = () => {
   const location = useLocation();
+  const credits = getCredits();
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/50">
@@ -18,6 +20,13 @@ const Navbar = () => {
         </Link>
 
         <div className="flex items-center gap-3">
+          {/* Credits badge */}
+          <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-chip-yellow-light border border-chip-yellow/30">
+            <Zap className="w-3.5 h-3.5 text-chip-orange" />
+            <span className="text-xs font-bold text-foreground">{credits}</span>
+            <span className="text-xs text-muted-foreground">lượt AI</span>
+          </div>
+
           <Link to="/saved">
             <Button variant="ghost" size="sm" className={location.pathname === "/saved" ? "bg-chip-yellow-light" : ""}>
               Chuyến đi của tôi

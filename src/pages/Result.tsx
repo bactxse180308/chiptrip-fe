@@ -1,19 +1,45 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { MapPin, Clock, Wallet, Star, Bookmark, Share2, Crown, Check } from "lucide-react";
+import { MapPin, Clock, Wallet, Star, Bookmark, Share2, Crown, Check, Download, ExternalLink, Hotel, UtensilsCrossed, Ticket, Coffee } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import Navbar from "@/components/Navbar";
-import { generateTrip, saveTrip, type TripPlan, type TripItem } from "@/lib/trip-data";
+import { generateTrip, saveTrip, generatePackingList, type TripPlan, type TripItem } from "@/lib/trip-data";
+import PackingList from "@/components/PackingList";
+import ExportDialog from "@/components/ExportDialog";
+
+const bookingIcons: Record<string, React.ElementType> = {
+  hotel: Hotel,
+  restaurant: UtensilsCrossed,
+  attraction: Ticket,
+  cafe: Coffee,
+  transport: MapPin,
+};
+
+const bookingLabels: Record<string, string> = {
+  hotel: "Đặt phòng",
+  restaurant: "Xem quán",
+  attraction: "Mua vé",
+  cafe: "Xem quán",
+  transport: "Đặt xe",
+};
 
 const Result = () => {
   const navigate = useNavigate();
   const { state } = useLocation();
   const [saved, setSaved] = useState(false);
 
-  // Use passed trip or generate default
   const trip: TripPlan = state?.trip || generateTrip("Đà Nẵng", "2026-03-15", "2026-03-17", 3, []);
+
+  const packingItems = generatePackingList(
+    trip.destination,
+    trip.days.length,
+    trip.tags.map(t => {
+      const map: Record<string, string> = { "Chữa lành": "healing", "Ẩm thực": "food", "Sống ảo": "photo", "Mạo hiểm": "adventure" };
+      return map[t] || "";
+    }).filter(Boolean)
+  );
 
   const handleSave = () => {
     saveTrip(trip);
@@ -46,6 +72,23 @@ const Result = () => {
     navigate("/location", { state: { item } });
   };
 
+  const handleBooking = (e: React.MouseEvent, item: TripItem) => {
+    e.stopPropagation();
+    if (item.bookingUrl) {
+      window.open(item.bookingUrl, "_blank");
+    } else {
+      const searchQuery = encodeURIComponent(item.title + " " + (item.address || trip.destination));
+      window.open(`https://www.google.com/search?q=${searchQuery}`, "_blank");
+    }
+  };
+
+  // Calculate detailed costs
+  const allItems = trip.days.flatMap(d => d.items);
+  const costBreakdown = allItems.reduce((sum, item) => {
+    const num = parseInt(item.cost.replace(/[^0-9]/g, ""), 10);
+    return sum + (isNaN(num) ? 0 : num);
+  }, 0);
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -54,8 +97,8 @@ const Result = () => {
           <div className="grid lg:grid-cols-5 gap-8">
             {/* Left - Map (40%) */}
             <div className="lg:col-span-2">
-              <div className="sticky top-24">
-                <div className="rounded-2xl overflow-hidden border border-border bg-card shadow-card h-[70vh]">
+              <div className="sticky top-24 space-y-4">
+                <div className="rounded-2xl overflow-hidden border border-border bg-card shadow-card h-[50vh]">
                   <iframe
                     title="Bản đồ lịch trình"
                     width="100%"
@@ -65,6 +108,46 @@ const Result = () => {
                     referrerPolicy="no-referrer-when-downgrade"
                     src={`https://www.google.com/maps/embed/v1/search?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q=${encodeURIComponent(trip.destination + " du lịch")}&zoom=12`}
                   />
+                </div>
+
+                {/* Cost breakdown card */}
+                <div className="rounded-2xl border border-border bg-card shadow-card p-5 space-y-3">
+                  <h3 className="font-display font-bold text-foreground flex items-center gap-2">
+                    <Wallet className="w-4 h-4 text-chip-orange" /> Dự toán chi phí
+                  </h3>
+                  <div className="space-y-2">
+                    {trip.days.map(day => {
+                      const dayCost = day.items.reduce((sum, item) => {
+                        const num = parseInt(item.cost.replace(/[^0-9]/g, ""), 10);
+                        return sum + (isNaN(num) ? 0 : num);
+                      }, 0);
+                      return (
+                        <div key={day.day} className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">{day.day}</span>
+                          <span className="font-semibold text-foreground">{dayCost > 0 ? `${dayCost >= 1000 ? `${(dayCost / 1000).toFixed(1)}M` : `${dayCost}K`}` : "Miễn phí"}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="border-t border-border pt-3 flex items-center justify-between">
+                    <span className="font-semibold text-foreground">Tổng ước tính</span>
+                    <span className="text-lg font-bold text-gradient">{trip.totalCost} VNĐ</span>
+                  </div>
+                </div>
+
+                {/* Insurance upsell */}
+                <div className="rounded-2xl border border-chip-yellow/30 bg-gradient-warm p-5 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">🛡️</span>
+                    <div>
+                      <p className="font-semibold text-foreground text-sm">Bảo hiểm du lịch</p>
+                      <p className="text-xs text-muted-foreground">Bảo vệ chuyến đi từ 49K/ngày</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="hero" size="sm" className="flex-1 text-xs">Mua bảo hiểm</Button>
+                    <Button variant="ghost" size="sm" className="text-xs">Tìm hiểu</Button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -88,6 +171,9 @@ const Result = () => {
                   </div>
                   <div className="flex gap-2">
                     <Button variant="soft" size="sm" onClick={handleShare}><Share2 className="w-4 h-4" /></Button>
+                    <ExportDialog trip={trip}>
+                      <Button variant="soft" size="sm"><Download className="w-4 h-4" /></Button>
+                    </ExportDialog>
                     <Button
                       variant={saved ? "soft" : "hero"}
                       size="sm"
@@ -118,26 +204,40 @@ const Result = () => {
                   </div>
 
                   <div className="space-y-3 pl-4 border-l-2 border-chip-orange/20 ml-4">
-                    {day.items.map((item, idx) => (
-                      <div
-                        key={idx}
-                        onClick={() => handleItemClick(item)}
-                        className="relative flex gap-4 bg-card rounded-xl p-4 border border-border shadow-card hover:shadow-warm transition-all ml-4 cursor-pointer hover:-translate-y-0.5"
-                      >
-                        <div className="absolute -left-[1.6rem] top-5 w-3 h-3 rounded-full bg-chip-orange border-2 border-background" />
-                        <img src={item.image} alt={item.title} className="w-16 h-16 rounded-xl object-cover flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-semibold text-chip-orange">{item.time}</span>
+                    {day.items.map((item, idx) => {
+                      const BookingIcon = bookingIcons[item.bookingType || "attraction"] || Ticket;
+                      const bookingLabel = bookingLabels[item.bookingType || "attraction"] || "Xem thêm";
+
+                      return (
+                        <div
+                          key={idx}
+                          onClick={() => handleItemClick(item)}
+                          className="relative flex gap-4 bg-card rounded-xl p-4 border border-border shadow-card hover:shadow-warm transition-all ml-4 cursor-pointer hover:-translate-y-0.5 group"
+                        >
+                          <div className="absolute -left-[1.6rem] top-5 w-3 h-3 rounded-full bg-chip-orange border-2 border-background" />
+                          <img src={item.image} alt={item.title} className="w-16 h-16 rounded-xl object-cover flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-semibold text-chip-orange">{item.time}</span>
+                            </div>
+                            <h4 className="font-semibold text-foreground truncate">{item.title}</h4>
+                            <p className="text-sm text-muted-foreground">{item.desc}</p>
+                            {/* Affiliate CTA */}
+                            <button
+                              onClick={(e) => handleBooking(e, item)}
+                              className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-chip-yellow-light hover:bg-chip-orange/10 border border-chip-yellow/30 text-xs font-semibold text-chip-orange transition-all hover:shadow-warm"
+                            >
+                              <BookingIcon className="w-3 h-3" />
+                              {bookingLabel}
+                              <ExternalLink className="w-3 h-3" />
+                            </button>
                           </div>
-                          <h4 className="font-semibold text-foreground truncate">{item.title}</h4>
-                          <p className="text-sm text-muted-foreground">{item.desc}</p>
+                          <div className="text-right flex-shrink-0">
+                            <span className="text-sm font-bold text-foreground">{item.cost}</span>
+                          </div>
                         </div>
-                        <div className="text-right flex-shrink-0">
-                          <span className="text-sm font-bold text-foreground">{item.cost}</span>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
 
                   {/* Upsell banner after day 1 */}
@@ -162,6 +262,9 @@ const Result = () => {
                   )}
                 </motion.div>
               ))}
+
+              {/* Packing List */}
+              <PackingList items={packingItems} />
             </div>
           </div>
         </div>

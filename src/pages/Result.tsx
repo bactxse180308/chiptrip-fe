@@ -1,7 +1,7 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { MapPin, Clock, Wallet, Star, Bookmark, Share2, Crown, Check, Download, ExternalLink, Hotel, UtensilsCrossed, Ticket, Coffee } from "lucide-react";
+import { MapPin, Clock, Wallet, Star, Bookmark, Share2, Crown, Check, Download, ExternalLink, Hotel, UtensilsCrossed, Ticket, Coffee, Copy, Trash2, Plus, GripVertical } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import Navbar from "@/components/Navbar";

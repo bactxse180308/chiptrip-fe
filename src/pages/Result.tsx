@@ -202,11 +202,20 @@ const Result = () => {
                       <span className="flex items-center gap-1"><Star className="w-4 h-4 text-chip-yellow" /> {trip.rating}</span>
                     </div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap">
                     <Button variant="soft" size="sm" onClick={handleShare}><Share2 className="w-4 h-4" /></Button>
                     <ExportDialog trip={trip}>
                       <Button variant="soft" size="sm"><Download className="w-4 h-4" /></Button>
                     </ExportDialog>
+                    <Button variant="soft" size="sm" onClick={handleClone}><Copy className="w-4 h-4" /> Clone</Button>
+                    <Button
+                      variant={editMode ? "hero" : "soft"}
+                      size="sm"
+                      onClick={() => setEditMode(!editMode)}
+                    >
+                      {editMode ? <Check className="w-4 h-4" /> : <GripVertical className="w-4 h-4" />}
+                      {editMode ? "Xong" : "Sửa"}
+                    </Button>
                     <Button
                       variant={saved ? "soft" : "hero"}
                       size="sm"
@@ -214,7 +223,7 @@ const Result = () => {
                       disabled={saved}
                     >
                       {saved ? <Check className="w-4 h-4" /> : <Bookmark className="w-4 h-4" />}
-                      {saved ? "Đã lưu" : "Lưu kế hoạch"}
+                      {saved ? "Đã lưu" : "Lưu"}
                     </Button>
                   </div>
                 </div>

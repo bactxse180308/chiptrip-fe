@@ -9,6 +9,7 @@ import Result from "./pages/Result";
 import SavedPlans from "./pages/SavedPlans";
 import LocationDetail from "./pages/LocationDetail";
 import NotFound from "./pages/NotFound";
+import MobileNav from "./components/MobileNav";
 
 const queryClient = new QueryClient();
 
@@ -26,6 +27,7 @@ const App = () => (
           <Route path="/location" element={<LocationDetail />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
+        <MobileNav />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

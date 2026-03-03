@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { Search, CalendarDays, Wallet, Heart, UtensilsCrossed, Camera, Mountain, ArrowRight, ArrowLeft, Sparkles, Loader2 } from "lucide-react";
+import { Search, CalendarDays, Wallet, Heart, UtensilsCrossed, Camera, Mountain, ArrowRight, ArrowLeft, Sparkles, Loader2, Users } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { generateTrip } from "@/lib/trip-data";
 
@@ -21,6 +21,7 @@ const Planning = () => {
   const [dates, setDates] = useState({ start: "", end: "" });
   const [budget, setBudget] = useState([3]);
   const [styles, setStyles] = useState<string[]>([]);
+  const [travelers, setTravelers] = useState(2);
   const [isLoading, setIsLoading] = useState(false);
 
   const budgetLabels = ["< 1M", "1-3M", "3-5M", "5-10M", "10M+"];
@@ -41,9 +42,23 @@ const Planning = () => {
     if (step === 0) return destination.length > 0;
     if (step === 1) return dates.start && dates.end;
     if (step === 2) return true;
-    if (step === 3) return styles.length > 0;
+    if (step === 3) return true;
+    if (step === 4) return styles.length > 0;
     return true;
   };
+
+  const quickPicks = [
+    { name: "Đà Nẵng", emoji: "🏖️" },
+    { name: "Đà Lạt", emoji: "🌸" },
+    { name: "Hà Nội", emoji: "🏛️" },
+    { name: "Phú Quốc", emoji: "🌴" },
+    { name: "Nha Trang", emoji: "🐚" },
+    { name: "Sapa", emoji: "🏔️" },
+  ];
+
+  const filteredSuggestions = destination.length > 0
+    ? quickPicks.filter(p => p.name.toLowerCase().includes(destination.toLowerCase()) && p.name.toLowerCase() !== destination.toLowerCase())
+    : [];
 
   const steps = [
     // Step 0: Destination
@@ -51,7 +66,7 @@ const Planning = () => {
       <div className="text-center space-y-3">
         <span className="text-5xl">🗺️</span>
         <h2 className="text-3xl lg:text-4xl font-bold text-foreground">Bạn muốn khám phá nơi nào?</h2>
-        <p className="text-muted-foreground">Nhập tên thành phố, tỉnh thành hoặc quốc gia</p>
+        <p className="text-muted-foreground">Nhập tên thành phố hoặc chọn gợi ý bên dưới</p>
       </div>
       <div className="relative w-full max-w-lg">
         <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
@@ -61,7 +76,36 @@ const Planning = () => {
           placeholder="VD: Đà Nẵng, Đà Lạt, Phú Quốc..."
           className="w-full h-16 pl-14 pr-6 rounded-2xl border-2 border-border bg-card text-foreground text-lg font-medium placeholder:text-muted-foreground focus:outline-none focus:border-chip-orange focus:ring-4 focus:ring-chip-orange/10 transition-all"
         />
+        {/* Autocomplete dropdown */}
+        {filteredSuggestions.length > 0 && (
+          <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-xl shadow-warm overflow-hidden z-10">
+            {filteredSuggestions.map(s => (
+              <button
+                key={s.name}
+                onClick={() => setDestination(s.name)}
+                className="w-full flex items-center gap-3 px-5 py-3 hover:bg-muted/50 transition-colors text-left"
+              >
+                <span>{s.emoji}</span>
+                <span className="font-medium text-foreground">{s.name}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
+      {/* Quick picks */}
+      {!destination && (
+        <div className="flex flex-wrap justify-center gap-2 max-w-lg">
+          {quickPicks.map(p => (
+            <button
+              key={p.name}
+              onClick={() => setDestination(p.name)}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border bg-card hover:border-chip-orange/40 hover:shadow-warm transition-all text-sm font-medium text-foreground"
+            >
+              <span>{p.emoji}</span> {p.name}
+            </button>
+          ))}
+        </div>
+      )}
     </motion.div>,
 
     // Step 1: Dates
@@ -116,8 +160,44 @@ const Planning = () => {
       </div>
     </motion.div>,
 
-    // Step 3: Travel style
+    // Step 3: Number of travelers
     <motion.div key="step3" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -30 }} className="flex flex-col items-center justify-center min-h-[60vh] gap-8">
+      <div className="text-center space-y-3">
+        <span className="text-5xl">👥</span>
+        <h2 className="text-3xl lg:text-4xl font-bold text-foreground">Đi bao nhiêu người?</h2>
+        <p className="text-muted-foreground">Số lượng thành viên trong chuyến đi</p>
+      </div>
+      <div className="flex items-center gap-6">
+        <button
+          onClick={() => setTravelers(Math.max(1, travelers - 1))}
+          className="w-14 h-14 rounded-2xl border-2 border-border bg-card flex items-center justify-center text-2xl font-bold text-foreground hover:border-chip-orange transition-all"
+        >−</button>
+        <div className="text-center">
+          <span className="text-6xl font-bold text-gradient">{travelers}</span>
+          <p className="text-sm text-muted-foreground mt-1">người</p>
+        </div>
+        <button
+          onClick={() => setTravelers(Math.min(20, travelers + 1))}
+          className="w-14 h-14 rounded-2xl border-2 border-border bg-card flex items-center justify-center text-2xl font-bold text-foreground hover:border-chip-orange transition-all"
+        >+</button>
+      </div>
+      <div className="flex gap-3">
+        {[1, 2, 4, 6].map(n => (
+          <button
+            key={n}
+            onClick={() => setTravelers(n)}
+            className={`px-4 py-2 rounded-xl border-2 text-sm font-medium transition-all ${
+              travelers === n ? "border-chip-orange bg-chip-orange/10 text-chip-orange" : "border-border bg-card text-muted-foreground hover:border-chip-orange/40"
+            }`}
+          >
+            {n === 1 ? "Solo 🧍" : n === 2 ? "Đôi 💑" : n === 4 ? "Nhóm 4 👨‍👩‍👧‍👦" : "Nhóm 6+ 🎉"}
+          </button>
+        ))}
+      </div>
+    </motion.div>,
+
+    // Step 4: Travel style
+    <motion.div key="step4" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -30 }} className="flex flex-col items-center justify-center min-h-[60vh] gap-8">
       <div className="text-center space-y-3">
         <span className="text-5xl">✨</span>
         <h2 className="text-3xl lg:text-4xl font-bold text-foreground">Gu du lịch của bạn là gì?</h2>
@@ -148,7 +228,7 @@ const Planning = () => {
       <div className="pt-20 pb-12 px-6">
         <div className="container mx-auto max-w-lg mb-8">
           <div className="flex gap-2">
-            {[0, 1, 2, 3].map((i) => (
+            {[0, 1, 2, 3, 4].map((i) => (
               <div key={i} className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${i <= step ? "bg-chip-orange" : "bg-border"}`} />
             ))}
           </div>
@@ -174,7 +254,7 @@ const Planning = () => {
               <Button variant="ghost" onClick={() => setStep((s) => s - 1)} disabled={step === 0}>
                 <ArrowLeft className="w-4 h-4" /> Quay lại
               </Button>
-              {step < 3 ? (
+              {step < 4 ? (
                 <Button variant="hero" onClick={() => setStep((s) => s + 1)} disabled={!canNext()}>
                   Tiếp theo <ArrowRight className="w-4 h-4" />
                 </Button>

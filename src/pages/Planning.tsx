@@ -89,7 +89,7 @@ const Planning = () => {
   const allPlaces = regions.flatMap(r => r.places);
 
   const filteredSuggestions = destination.length > 0
-    ? quickPicks.filter(p => p.name.toLowerCase().includes(destination.toLowerCase()) && p.name.toLowerCase() !== destination.toLowerCase())
+    ? allPlaces.filter(p => p.name.toLowerCase().includes(destination.toLowerCase()) && p.name.toLowerCase() !== destination.toLowerCase())
     : [];
 
   const steps = [

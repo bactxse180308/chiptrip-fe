@@ -45,13 +45,26 @@ const Planning = () => {
     return true;
   };
 
+  const quickPicks = [
+    { name: "Đà Nẵng", emoji: "🏖️" },
+    { name: "Đà Lạt", emoji: "🌸" },
+    { name: "Hà Nội", emoji: "🏛️" },
+    { name: "Phú Quốc", emoji: "🌴" },
+    { name: "Nha Trang", emoji: "🐚" },
+    { name: "Sapa", emoji: "🏔️" },
+  ];
+
+  const filteredSuggestions = destination.length > 0
+    ? quickPicks.filter(p => p.name.toLowerCase().includes(destination.toLowerCase()) && p.name.toLowerCase() !== destination.toLowerCase())
+    : [];
+
   const steps = [
     // Step 0: Destination
     <motion.div key="step0" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -30 }} className="flex flex-col items-center justify-center min-h-[60vh] gap-8">
       <div className="text-center space-y-3">
         <span className="text-5xl">🗺️</span>
         <h2 className="text-3xl lg:text-4xl font-bold text-foreground">Bạn muốn khám phá nơi nào?</h2>
-        <p className="text-muted-foreground">Nhập tên thành phố, tỉnh thành hoặc quốc gia</p>
+        <p className="text-muted-foreground">Nhập tên thành phố hoặc chọn gợi ý bên dưới</p>
       </div>
       <div className="relative w-full max-w-lg">
         <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
@@ -61,7 +74,36 @@ const Planning = () => {
           placeholder="VD: Đà Nẵng, Đà Lạt, Phú Quốc..."
           className="w-full h-16 pl-14 pr-6 rounded-2xl border-2 border-border bg-card text-foreground text-lg font-medium placeholder:text-muted-foreground focus:outline-none focus:border-chip-orange focus:ring-4 focus:ring-chip-orange/10 transition-all"
         />
+        {/* Autocomplete dropdown */}
+        {filteredSuggestions.length > 0 && (
+          <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-xl shadow-warm overflow-hidden z-10">
+            {filteredSuggestions.map(s => (
+              <button
+                key={s.name}
+                onClick={() => setDestination(s.name)}
+                className="w-full flex items-center gap-3 px-5 py-3 hover:bg-muted/50 transition-colors text-left"
+              >
+                <span>{s.emoji}</span>
+                <span className="font-medium text-foreground">{s.name}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
+      {/* Quick picks */}
+      {!destination && (
+        <div className="flex flex-wrap justify-center gap-2 max-w-lg">
+          {quickPicks.map(p => (
+            <button
+              key={p.name}
+              onClick={() => setDestination(p.name)}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border bg-card hover:border-chip-orange/40 hover:shadow-warm transition-all text-sm font-medium text-foreground"
+            >
+              <span>{p.emoji}</span> {p.name}
+            </button>
+          ))}
+        </div>
+      )}
     </motion.div>,
 
     // Step 1: Dates

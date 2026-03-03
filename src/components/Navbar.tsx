@@ -65,10 +65,12 @@ const Navbar = () => {
               Chuyến đi của tôi
             </Button>
           </Link>
-          <Button variant="soft" size="sm">
-            <User className="w-4 h-4" />
-            <span className="hidden sm:inline">Đăng nhập</span>
-          </Button>
+          <Link to="/auth">
+            <Button variant="soft" size="sm">
+              <User className="w-4 h-4" />
+              <span className="hidden sm:inline">Đăng nhập</span>
+            </Button>
+          </Link>
         </div>
       </div>
     </nav>

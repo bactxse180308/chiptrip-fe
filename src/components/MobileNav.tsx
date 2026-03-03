@@ -28,10 +28,10 @@ const MobileNav = () => {
             </Link>
           );
         })}
-        <button className="flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl text-muted-foreground">
+        <Link to="/auth" className="flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl text-muted-foreground">
           <User className="w-5 h-5" />
           <span className="text-[10px] font-medium">Tài khoản</span>
-        </button>
+        </Link>
       </div>
     </nav>
   );

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { Search, CalendarDays, Wallet, Heart, UtensilsCrossed, Camera, Mountain, ArrowRight, ArrowLeft, Sparkles, Loader2 } from "lucide-react";
+import { Search, CalendarDays, Wallet, Heart, UtensilsCrossed, Camera, Mountain, ArrowRight, ArrowLeft, Sparkles, Loader2, Users } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { generateTrip } from "@/lib/trip-data";
 
@@ -21,6 +21,7 @@ const Planning = () => {
   const [dates, setDates] = useState({ start: "", end: "" });
   const [budget, setBudget] = useState([3]);
   const [styles, setStyles] = useState<string[]>([]);
+  const [travelers, setTravelers] = useState(2);
   const [isLoading, setIsLoading] = useState(false);
 
   const budgetLabels = ["< 1M", "1-3M", "3-5M", "5-10M", "10M+"];
@@ -41,7 +42,8 @@ const Planning = () => {
     if (step === 0) return destination.length > 0;
     if (step === 1) return dates.start && dates.end;
     if (step === 2) return true;
-    if (step === 3) return styles.length > 0;
+    if (step === 3) return true;
+    if (step === 4) return styles.length > 0;
     return true;
   };
 
@@ -158,8 +160,44 @@ const Planning = () => {
       </div>
     </motion.div>,
 
-    // Step 3: Travel style
+    // Step 3: Number of travelers
     <motion.div key="step3" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -30 }} className="flex flex-col items-center justify-center min-h-[60vh] gap-8">
+      <div className="text-center space-y-3">
+        <span className="text-5xl">👥</span>
+        <h2 className="text-3xl lg:text-4xl font-bold text-foreground">Đi bao nhiêu người?</h2>
+        <p className="text-muted-foreground">Số lượng thành viên trong chuyến đi</p>
+      </div>
+      <div className="flex items-center gap-6">
+        <button
+          onClick={() => setTravelers(Math.max(1, travelers - 1))}
+          className="w-14 h-14 rounded-2xl border-2 border-border bg-card flex items-center justify-center text-2xl font-bold text-foreground hover:border-chip-orange transition-all"
+        >−</button>
+        <div className="text-center">
+          <span className="text-6xl font-bold text-gradient">{travelers}</span>
+          <p className="text-sm text-muted-foreground mt-1">người</p>
+        </div>
+        <button
+          onClick={() => setTravelers(Math.min(20, travelers + 1))}
+          className="w-14 h-14 rounded-2xl border-2 border-border bg-card flex items-center justify-center text-2xl font-bold text-foreground hover:border-chip-orange transition-all"
+        >+</button>
+      </div>
+      <div className="flex gap-3">
+        {[1, 2, 4, 6].map(n => (
+          <button
+            key={n}
+            onClick={() => setTravelers(n)}
+            className={`px-4 py-2 rounded-xl border-2 text-sm font-medium transition-all ${
+              travelers === n ? "border-chip-orange bg-chip-orange/10 text-chip-orange" : "border-border bg-card text-muted-foreground hover:border-chip-orange/40"
+            }`}
+          >
+            {n === 1 ? "Solo 🧍" : n === 2 ? "Đôi 💑" : n === 4 ? "Nhóm 4 👨‍👩‍👧‍👦" : "Nhóm 6+ 🎉"}
+          </button>
+        ))}
+      </div>
+    </motion.div>,
+
+    // Step 4: Travel style
+    <motion.div key="step4" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -30 }} className="flex flex-col items-center justify-center min-h-[60vh] gap-8">
       <div className="text-center space-y-3">
         <span className="text-5xl">✨</span>
         <h2 className="text-3xl lg:text-4xl font-bold text-foreground">Gu du lịch của bạn là gì?</h2>

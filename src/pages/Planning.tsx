@@ -124,17 +124,26 @@ const Planning = () => {
           </div>
         )}
       </div>
-      {/* Quick picks */}
+      {/* Regions */}
       {!destination && (
-        <div className="flex flex-wrap justify-center gap-2 max-w-lg">
-          {quickPicks.map(p => (
-            <button
-              key={p.name}
-              onClick={() => setDestination(p.name)}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border bg-card hover:border-chip-orange/40 hover:shadow-warm transition-all text-sm font-medium text-foreground"
-            >
-              <span>{p.emoji}</span> {p.name}
-            </button>
+        <div className="w-full max-w-xl space-y-4">
+          {regions.map(region => (
+            <div key={region.label}>
+              <p className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1.5">
+                <span>{region.emoji}</span> {region.label}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {region.places.map(p => (
+                  <button
+                    key={p.name}
+                    onClick={() => setDestination(p.name)}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border bg-card hover:border-chip-orange/40 hover:shadow-warm transition-all text-sm font-medium text-foreground"
+                  >
+                    <span>{p.emoji}</span> {p.name}
+                  </button>
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       )}

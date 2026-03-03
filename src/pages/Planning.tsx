@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Search, CalendarDays, Wallet, Heart, UtensilsCrossed, Camera, Mountain, ArrowRight, ArrowLeft, Sparkles, Loader2 } from "lucide-react";
 import Navbar from "@/components/Navbar";
+import { generateTrip } from "@/lib/trip-data";
 
 const travelStyles = [
   { id: "healing", label: "Chữa lành", icon: Heart, emoji: "🧘" },
@@ -32,7 +33,8 @@ const Planning = () => {
 
   const handleGenerate = () => {
     setIsLoading(true);
-    setTimeout(() => navigate("/result"), 2500);
+    const trip = generateTrip(destination, dates.start, dates.end, budget[0], styles);
+    setTimeout(() => navigate("/result", { state: { trip } }), 2500);
   };
 
   const canNext = () => {
@@ -56,7 +58,7 @@ const Planning = () => {
         <input
           value={destination}
           onChange={(e) => setDestination(e.target.value)}
-          placeholder="VD: Đà Nẵng, Phú Quốc, Nhật Bản..."
+          placeholder="VD: Đà Nẵng, Đà Lạt, Phú Quốc..."
           className="w-full h-16 pl-14 pr-6 rounded-2xl border-2 border-border bg-card text-foreground text-lg font-medium placeholder:text-muted-foreground focus:outline-none focus:border-chip-orange focus:ring-4 focus:ring-chip-orange/10 transition-all"
         />
       </div>
@@ -107,17 +109,9 @@ const Planning = () => {
           <span className="text-4xl font-bold text-gradient">{budgetLabels[budget[0]]}</span>
           <span className="text-muted-foreground ml-2">VNĐ</span>
         </div>
-        <Slider
-          value={budget}
-          onValueChange={setBudget}
-          max={4}
-          step={1}
-          className="w-full"
-        />
+        <Slider value={budget} onValueChange={setBudget} max={4} step={1} className="w-full" />
         <div className="flex justify-between text-xs text-muted-foreground">
-          {budgetLabels.map((l) => (
-            <span key={l}>{l}</span>
-          ))}
+          {budgetLabels.map((l) => (<span key={l}>{l}</span>))}
         </div>
       </div>
     </motion.div>,
@@ -152,16 +146,10 @@ const Planning = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="pt-20 pb-12 px-6">
-        {/* Progress */}
         <div className="container mx-auto max-w-lg mb-8">
           <div className="flex gap-2">
             {[0, 1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${
-                  i <= step ? "bg-chip-orange" : "bg-border"
-                }`}
-              />
+              <div key={i} className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${i <= step ? "bg-chip-orange" : "bg-border"}`} />
             ))}
           </div>
         </div>
@@ -169,55 +157,30 @@ const Planning = () => {
         <div className="container mx-auto max-w-2xl">
           <AnimatePresence mode="wait">
             {isLoading ? (
-              <motion.div
-                key="loading"
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="flex flex-col items-center justify-center min-h-[60vh] gap-6"
-              >
+              <motion.div key="loading" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center justify-center min-h-[60vh] gap-6">
                 <div className="w-20 h-20 rounded-full bg-gradient-accent flex items-center justify-center animate-pulse-glow">
                   <Loader2 className="w-8 h-8 text-accent-foreground animate-spin" />
                 </div>
                 <h2 className="text-2xl font-bold text-foreground">AI đang tạo lịch trình...</h2>
-                <p className="text-muted-foreground">Chip Trip đang phân tích dữ liệu và tìm kiếm lịch trình hoàn hảo cho bạn</p>
+                <p className="text-muted-foreground">Chip Trip đang tìm kiếm lịch trình hoàn hảo cho <span className="font-semibold text-chip-orange">{destination}</span></p>
               </motion.div>
             ) : (
               steps[step]
             )}
           </AnimatePresence>
 
-          {/* Navigation */}
           {!isLoading && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="flex justify-between items-center mt-8 max-w-lg mx-auto"
-            >
-              <Button
-                variant="ghost"
-                onClick={() => setStep((s) => s - 1)}
-                disabled={step === 0}
-              >
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-between items-center mt-8 max-w-lg mx-auto">
+              <Button variant="ghost" onClick={() => setStep((s) => s - 1)} disabled={step === 0}>
                 <ArrowLeft className="w-4 h-4" /> Quay lại
               </Button>
-
               {step < 3 ? (
-                <Button
-                  variant="hero"
-                  onClick={() => setStep((s) => s + 1)}
-                  disabled={!canNext()}
-                >
+                <Button variant="hero" onClick={() => setStep((s) => s + 1)} disabled={!canNext()}>
                   Tiếp theo <ArrowRight className="w-4 h-4" />
                 </Button>
               ) : (
-                <Button
-                  variant="cta"
-                  size="lg"
-                  onClick={handleGenerate}
-                  disabled={!canNext()}
-                >
-                  <Sparkles className="w-5 h-5" />
-                  Tạo lịch trình siêu tốc
+                <Button variant="cta" size="lg" onClick={handleGenerate} disabled={!canNext()}>
+                  <Sparkles className="w-5 h-5" /> Tạo lịch trình siêu tốc
                 </Button>
               )}
             </motion.div>

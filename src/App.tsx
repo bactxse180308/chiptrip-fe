@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import Planning from "./pages/Planning";
 import Result from "./pages/Result";
 import SavedPlans from "./pages/SavedPlans";
+import LocationDetail from "./pages/LocationDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,6 +23,7 @@ const App = () => (
           <Route path="/planning" element={<Planning />} />
           <Route path="/result" element={<Result />} />
           <Route path="/saved" element={<SavedPlans />} />
+          <Route path="/location" element={<LocationDetail />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

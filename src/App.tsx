@@ -26,6 +26,7 @@ const App = () => (
           <Route path="/result" element={<Result />} />
           <Route path="/saved" element={<SavedPlans />} />
           <Route path="/location" element={<LocationDetail />} />
+          <Route path="/auth" element={<Auth />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
         <MobileNav />

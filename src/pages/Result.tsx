@@ -29,8 +29,10 @@ const Result = () => {
   const navigate = useNavigate();
   const { state } = useLocation();
   const [saved, setSaved] = useState(false);
+  const [editMode, setEditMode] = useState(false);
 
-  const trip: TripPlan = state?.trip || generateTrip("Đà Nẵng", "2026-03-15", "2026-03-17", 3, []);
+  const initialTrip: TripPlan = state?.trip || generateTrip("Đà Nẵng", "2026-03-15", "2026-03-17", 3, []);
+  const [trip, setTrip] = useState<TripPlan>(initialTrip);
 
   const packingItems = generatePackingList(
     trip.destination,

@@ -1,9 +1,9 @@
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MapPin, Clock, Wallet, Star, Bookmark, Share2, Check, Download, ExternalLink, Hotel, UtensilsCrossed, Ticket, Coffee, Copy, Trash2, GripVertical, RefreshCw } from "lucide-react";
-import { useState } from "react";
+import { MapPin, Clock, Wallet, Star, Bookmark, Share2, Check, Download, ExternalLink, Hotel, UtensilsCrossed, Ticket, Coffee, Copy, Trash2, GripVertical, RefreshCw, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import Navbar from "@/components/Navbar";
 import { generateTrip, generatePackingList, type TripPlan, type TripItem } from "@/lib/trip-data";
@@ -26,13 +26,41 @@ const bookingLabels: Record<string, string> = {
 const Result = () => {
   const navigate = useNavigate();
   const { state } = useLocation();
+  const [searchParams] = useSearchParams();
   const { user, profile } = useAuth();
   const [saved, setSaved] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [swapModal, setSwapModal] = useState<{ open: boolean; item: TripItem | null; dayIdx: number; itemIdx: number }>({ open: false, item: null, dayIdx: 0, itemIdx: 0 });
+  const [loadingTrip, setLoadingTrip] = useState(false);
+  const [dbTripId, setDbTripId] = useState<string | null>(null);
 
   const initialTrip: TripPlan = state?.trip || generateTrip("Đà Nẵng", "2026-03-15", "2026-03-17", 3, []);
   const [trip, setTrip] = useState<TripPlan>(initialTrip);
+
+  // Load trip from URL param ?id=xxx
+  useEffect(() => {
+    const tripId = searchParams.get("id") || searchParams.get("shared");
+    if (tripId && !state?.trip) {
+      setLoadingTrip(true);
+      setDbTripId(tripId);
+      supabase
+        .from("trips")
+        .select("id, trip_data")
+        .eq("id", tripId)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data?.trip_data) {
+            setTrip(data.trip_data as unknown as TripPlan);
+            setSaved(true);
+          }
+          setLoadingTrip(false);
+        });
+    } else if (state?.trip) {
+      // If loaded from state, check if it already exists in DB
+      const stateTrip = state.trip as TripPlan;
+      setTrip(stateTrip);
+    }
+  }, [searchParams, state]);
 
   const packingItems = generatePackingList(
     trip.destination,
@@ -57,15 +85,20 @@ const Result = () => {
     }
 
     try {
-      const { error } = await supabase.from("trips").insert({
+      const { data, error } = await supabase.from("trips").insert({
         user_id: user.id,
         destination: trip.destination,
         start_date: trip.days[0]?.date || null,
         end_date: trip.days[trip.days.length - 1]?.date || null,
         trip_data: trip as any,
-      });
+      }).select("id").single();
       if (error) throw error;
       setSaved(true);
+      if (data) {
+        setDbTripId(data.id);
+        // Update URL to include trip ID without navigation
+        window.history.replaceState(null, "", `/result?id=${data.id}`);
+      }
       toast.success("Đã lưu kế hoạch!", {
         description: "Xem lại trong \"Chuyến đi của tôi\"",
         action: { label: "Xem ngay", onClick: () => navigate("/saved") },
@@ -76,7 +109,10 @@ const Result = () => {
   };
 
   const handleShare = async () => {
-    const shareData = { title: trip.title, text: `Xem lịch trình ${trip.title} trên Chip Trip! 🐥`, url: window.location.href };
+    const shareUrl = dbTripId
+      ? `${window.location.origin}/result?id=${dbTripId}`
+      : window.location.href;
+    const shareData = { title: trip.title, text: `Xem lịch trình ${trip.title} trên Chip Trip! 🐥`, url: shareUrl };
     try {
       if (navigator.share) { await navigator.share(shareData); }
       else { await navigator.clipboard.writeText(`${shareData.text}\n${shareData.url}`); toast.success("Đã sao chép link!"); }
@@ -148,6 +184,18 @@ const Result = () => {
     }));
     toast.success("Đã đổi hoạt động!");
   };
+
+  if (loadingTrip) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="flex flex-col items-center justify-center pt-40 gap-4">
+          <Loader2 className="w-8 h-8 animate-spin text-chip-orange" />
+          <p className="text-muted-foreground">Đang tải lịch trình...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">

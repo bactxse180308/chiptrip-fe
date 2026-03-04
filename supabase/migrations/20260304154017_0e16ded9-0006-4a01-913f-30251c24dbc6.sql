@@ -1,0 +1,1 @@
+CREATE POLICY "Anyone can view trips by direct link" ON public.trips FOR SELECT USING (true);

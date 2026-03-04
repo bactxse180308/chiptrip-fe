@@ -70,11 +70,17 @@ const SuggestAlternativeModal = ({ open, onClose, item, onSelect }: Props) => {
   const [alternatives, setAlternatives] = useState<TripItem[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // Auto-load "same type" alternatives when modal opens
+  const handleOpen = () => {
+    if (item && !selectedCategory && alternatives.length === 0) {
+      handleCategorySelect("same");
+    }
+  };
+
   const handleCategorySelect = (catId: string) => {
     if (!item) return;
     setSelectedCategory(catId);
     setLoading(true);
-    // Simulate AI loading
     setTimeout(() => {
       setAlternatives(generateAlternatives(item, catId));
       setLoading(false);
@@ -94,7 +100,7 @@ const SuggestAlternativeModal = ({ open, onClose, item, onSelect }: Props) => {
   };
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) { handleReset(); onClose(); } }}>
+    <Dialog open={open} onOpenChange={(v) => { if (!v) { handleReset(); onClose(); } else { setTimeout(handleOpen, 100); } }}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">

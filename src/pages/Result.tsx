@@ -26,13 +26,41 @@ const bookingLabels: Record<string, string> = {
 const Result = () => {
   const navigate = useNavigate();
   const { state } = useLocation();
+  const [searchParams] = useSearchParams();
   const { user, profile } = useAuth();
   const [saved, setSaved] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [swapModal, setSwapModal] = useState<{ open: boolean; item: TripItem | null; dayIdx: number; itemIdx: number }>({ open: false, item: null, dayIdx: 0, itemIdx: 0 });
+  const [loadingTrip, setLoadingTrip] = useState(false);
+  const [dbTripId, setDbTripId] = useState<string | null>(null);
 
   const initialTrip: TripPlan = state?.trip || generateTrip("Đà Nẵng", "2026-03-15", "2026-03-17", 3, []);
   const [trip, setTrip] = useState<TripPlan>(initialTrip);
+
+  // Load trip from URL param ?id=xxx
+  useEffect(() => {
+    const tripId = searchParams.get("id") || searchParams.get("shared");
+    if (tripId && !state?.trip) {
+      setLoadingTrip(true);
+      setDbTripId(tripId);
+      supabase
+        .from("trips")
+        .select("id, trip_data")
+        .eq("id", tripId)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data?.trip_data) {
+            setTrip(data.trip_data as unknown as TripPlan);
+            setSaved(true);
+          }
+          setLoadingTrip(false);
+        });
+    } else if (state?.trip) {
+      // If loaded from state, check if it already exists in DB
+      const stateTrip = state.trip as TripPlan;
+      setTrip(stateTrip);
+    }
+  }, [searchParams, state]);
 
   const packingItems = generatePackingList(
     trip.destination,

@@ -167,10 +167,17 @@ const Result = () => {
                     <Wallet className="w-4 h-4 text-chip-orange" /> Dự toán chi phí
                   </h3>
                   <div className="space-y-2">
-                    {trip.days.map(day => {
+                {trip.days.map(day => {
                       const dayCost = day.items.reduce((sum, item) => {
-                        const num = parseInt(item.cost.replace(/[^0-9]/g, ""), 10);
-                        return sum + (isNaN(num) ? 0 : num);
+                        const costStr = item.cost.toLowerCase().replace(/[^0-9.km]/g, "");
+                        if (!costStr || costStr === "") return sum;
+                        const numMatch = costStr.match(/([0-9.]+)/);
+                        if (!numMatch) return sum;
+                        const num = parseFloat(numMatch[1]);
+                        if (isNaN(num)) return sum;
+                        if (costStr.includes("m")) return sum + num * 1000;
+                        if (costStr.includes("k")) return sum + num;
+                        return sum + num;
                       }, 0);
                       return (
                         <div key={day.day} className="flex items-center justify-between text-sm">

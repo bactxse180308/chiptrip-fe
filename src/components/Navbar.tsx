@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { MapPin, User, Zap, Moon, Sun, Crown, LogOut } from "lucide-react";
 import { getCredits } from "@/lib/trip-data";
@@ -81,9 +81,9 @@ const Navbar = () => {
 
           {user ? (
             <div className="flex items-center gap-2">
-              <span className="hidden sm:inline text-sm font-medium text-foreground truncate max-w-[120px]">
+              <Link to="/profile" className="hidden sm:inline text-sm font-medium text-foreground truncate max-w-[120px] hover:text-chip-orange transition-colors">
                 {profile?.display_name || user.email?.split("@")[0]}
-              </span>
+              </Link>
               <Button variant="soft" size="sm" onClick={handleSignOut}>
                 <LogOut className="w-4 h-4" />
                 <span className="hidden sm:inline">Đăng xuất</span>

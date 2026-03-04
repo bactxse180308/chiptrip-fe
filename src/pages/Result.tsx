@@ -187,10 +187,24 @@ const Result = () => {
                       );
                     })}
                   </div>
-                  <div className="border-t border-border pt-3 flex items-center justify-between">
-                    <span className="font-semibold text-foreground">Tổng ước tính</span>
-                    <span className="text-lg font-bold text-gradient">{trip.totalCost} VNĐ</span>
-                  </div>
+                  {(() => {
+                    const total = trip.days.reduce((s, day) => s + day.items.reduce((ds, item) => {
+                      const costStr = item.cost.toLowerCase().replace(/[^0-9.km]/g, "");
+                      const numMatch = costStr.match(/([0-9.]+)/);
+                      if (!numMatch) return ds;
+                      const num = parseFloat(numMatch[1]);
+                      if (isNaN(num)) return ds;
+                      if (costStr.includes("m")) return ds + num * 1000;
+                      if (costStr.includes("k")) return ds + num;
+                      return ds + num;
+                    }, 0), 0);
+                    return (
+                      <div className="border-t border-border pt-3 flex items-center justify-between">
+                        <span className="font-semibold text-foreground">Tổng ước tính</span>
+                        <span className="text-lg font-bold text-gradient">{total >= 1000 ? `${(total / 1000).toFixed(1)}M` : `${total}K`} VNĐ</span>
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 <div className="rounded-2xl border border-chip-yellow/30 bg-gradient-warm p-5 space-y-3">

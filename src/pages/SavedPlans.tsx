@@ -144,7 +144,7 @@ const SavedPlans = () => {
                         <span className="ml-auto font-semibold text-chip-orange">{trip.totalCost}</span>
                       </div>
                       <div className="flex gap-2">
-                        <Button variant="soft" size="sm" className="flex-1" onClick={() => navigate("/result", { state: { trip } })}>
+                        <Button variant="soft" size="sm" className="flex-1" onClick={() => navigate(`/result?id=${id}`, { state: { trip } })}>
                           <Eye className="w-3.5 h-3.5" /> Xem lại
                         </Button>
                         <AlertDialog>

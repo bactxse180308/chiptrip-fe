@@ -35,13 +35,13 @@ const Result = () => {
   const [loadingTrip, setLoadingTrip] = useState(false);
   const [dbTripId, setDbTripId] = useState<string | null>(null);
 
-  const initialTrip: TripPlan = state?.trip || generateTrip("Đà Nẵng", "2026-03-15", "2026-03-17", 3, []);
-  const [trip, setTrip] = useState<TripPlan>(initialTrip);
+  const [trip, setTrip] = useState<TripPlan | null>(null);
 
-  // Load trip from URL param ?id=xxx
+  // Load trip from URL param ?id=xxx or from navigation state
   useEffect(() => {
     const tripId = searchParams.get("id") || searchParams.get("shared");
-    if (tripId && !state?.trip) {
+    if (tripId) {
+      // Always load from DB when URL has id param
       setLoadingTrip(true);
       setDbTripId(tripId);
       supabase
@@ -49,19 +49,22 @@ const Result = () => {
         .select("id, trip_data")
         .eq("id", tripId)
         .maybeSingle()
-        .then(({ data }) => {
+        .then(({ data, error }) => {
           if (data?.trip_data) {
             setTrip(data.trip_data as unknown as TripPlan);
             setSaved(true);
+          } else {
+            // Fallback to state or default
+            setTrip(state?.trip || generateTrip("Đà Nẵng", "2026-03-15", "2026-03-17", 3, []));
           }
           setLoadingTrip(false);
         });
     } else if (state?.trip) {
-      // If loaded from state, check if it already exists in DB
-      const stateTrip = state.trip as TripPlan;
-      setTrip(stateTrip);
+      setTrip(state.trip as TripPlan);
+    } else {
+      setTrip(generateTrip("Đà Nẵng", "2026-03-15", "2026-03-17", 3, []));
     }
-  }, [searchParams, state]);
+  }, []);
 
   const packingItems = generatePackingList(
     trip.destination,

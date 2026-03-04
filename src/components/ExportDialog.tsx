@@ -9,6 +9,7 @@ import { getPlaceImage } from "@/lib/place-image";
 
 interface Props {
   trip: TripPlan;
+  dbTripId?: string | null;
   children: React.ReactNode;
 }
 
@@ -18,7 +19,7 @@ const exportOptions = [
   { id: "link", label: "Link chia sẻ", desc: "Copy link cho bạn bè", icon: Link2, emoji: "🔗", color: "bg-green-100 text-green-600" },
 ];
 
-const ExportDialog = ({ trip, children }: Props) => {
+const ExportDialog = ({ trip, dbTripId, children }: Props) => {
   const [exporting, setExporting] = useState<string | null>(null);
   const [exported, setExported] = useState<string[]>([]);
 
@@ -29,7 +30,8 @@ const ExportDialog = ({ trip, children }: Props) => {
     await new Promise(r => setTimeout(r, 1500));
 
     if (type === "link") {
-      await navigator.clipboard.writeText(`${window.location.origin}/result?id=${trip.id}`);
+      const shareId = dbTripId || trip.id;
+      await navigator.clipboard.writeText(`${window.location.origin}/result?id=${shareId}`);
       toast.success("Đã sao chép link chia sẻ!");
     } else if (type === "pdf") {
       toast.success("PDF đang được tạo!", { description: "Tính năng sẽ hoạt động đầy đủ khi kết nối backend" });

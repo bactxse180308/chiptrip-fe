@@ -282,9 +282,17 @@ const Result = () => {
                                 <h4 className="font-semibold text-foreground truncate">{item.title}</h4>
                                 <p className="text-sm text-muted-foreground">{item.desc}</p>
                                 {!editMode && (
-                                  <button onClick={(e) => handleBooking(e, item)} className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-chip-yellow-light hover:bg-chip-orange/10 border border-chip-yellow/30 text-xs font-semibold text-chip-orange transition-all hover:shadow-warm">
-                                    <BookingIcon className="w-3 h-3" /> {bookingLabel} <ExternalLink className="w-3 h-3" />
-                                  </button>
+                                  <div className="flex items-center gap-2 mt-2">
+                                    <button onClick={(e) => handleBooking(e, item)} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-chip-yellow-light hover:bg-chip-orange/10 border border-chip-yellow/30 text-xs font-semibold text-chip-orange transition-all hover:shadow-warm">
+                                      <BookingIcon className="w-3 h-3" /> {bookingLabel} <ExternalLink className="w-3 h-3" />
+                                    </button>
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); setSwapModal({ open: true, item, dayIdx, itemIdx: idx }); }}
+                                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-muted hover:bg-chip-orange/10 border border-border text-xs font-medium text-muted-foreground hover:text-chip-orange transition-all"
+                                    >
+                                      <RefreshCw className="w-3 h-3" /> Đổi
+                                    </button>
+                                  </div>
                                 )}
                                 {editMode && (
                                   <button

@@ -14,6 +14,41 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_votes: {
+        Row: {
+          activity_id: string
+          created_at: string
+          id: string
+          trip_id: string
+          user_id: string
+          vote: string
+        }
+        Insert: {
+          activity_id: string
+          created_at?: string
+          id?: string
+          trip_id: string
+          user_id: string
+          vote: string
+        }
+        Update: {
+          activity_id?: string
+          created_at?: string
+          id?: string
+          trip_id?: string
+          user_id?: string
+          vote?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_votes_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       packing_items: {
         Row: {
           category: string
@@ -103,6 +138,79 @@ export type Database = {
         }
         Relationships: []
       }
+      trip_expenses: {
+        Row: {
+          amount: number
+          category: string | null
+          created_at: string
+          id: string
+          paid_by: string
+          split_among: string[]
+          title: string
+          trip_id: string
+        }
+        Insert: {
+          amount: number
+          category?: string | null
+          created_at?: string
+          id?: string
+          paid_by: string
+          split_among?: string[]
+          title: string
+          trip_id: string
+        }
+        Update: {
+          amount?: number
+          category?: string | null
+          created_at?: string
+          id?: string
+          paid_by?: string
+          split_among?: string[]
+          title?: string
+          trip_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trip_expenses_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trip_members: {
+        Row: {
+          id: string
+          joined_at: string
+          role: string
+          trip_id: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          joined_at?: string
+          role?: string
+          trip_id: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          joined_at?: string
+          role?: string
+          trip_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trip_members_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trips: {
         Row: {
           budget_level: number | null
@@ -150,6 +258,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      user_in_trip: { Args: { _trip_id: string }; Returns: boolean }
       user_owns_trip: { Args: { _trip_id: string }; Returns: boolean }
     }
     Enums: {

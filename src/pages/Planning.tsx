@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Search, CalendarDays, Wallet, Heart, UtensilsCrossed, Camera, Mountain, ArrowRight, ArrowLeft, Sparkles, Loader2, Users } from "lucide-react";
 import Navbar from "@/components/Navbar";
-import { generateTrip } from "@/lib/trip-data";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const travelStyles = [
   { id: "healing", label: "Chữa lành", icon: Heart, emoji: "🧘" },
@@ -42,10 +43,37 @@ const Planning = () => {
     );
   };
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     setIsLoading(true);
-    const trip = generateTrip(destination, dates.start, dates.end, budget[0], styles);
-    setTimeout(() => navigate("/result", { state: { trip } }), 2500);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-trip", {
+        body: {
+          destination,
+          startDate: dates.start,
+          endDate: dates.end,
+          budget: budget[0],
+          styles,
+          travelers,
+        },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      const trip = data.trip;
+      // Add default images if AI didn't provide them
+      trip.days?.forEach((day: any) => {
+        day.items?.forEach((item: any) => {
+          if (!item.image) item.image = "/placeholder.svg";
+        });
+      });
+
+      navigate("/result", { state: { trip } });
+    } catch (err: any) {
+      console.error("AI generation failed:", err);
+      toast.error(err.message || "Tạo lịch trình thất bại, vui lòng thử lại");
+      setIsLoading(false);
+    }
   };
 
   const canNext = () => {

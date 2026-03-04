@@ -26,7 +26,7 @@ const bookingLabels: Record<string, string> = {
 const Result = () => {
   const navigate = useNavigate();
   const { state } = useLocation();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [saved, setSaved] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [swapModal, setSwapModal] = useState<{ open: boolean; item: TripItem | null; dayIdx: number; itemIdx: number }>({ open: false, item: null, dayIdx: 0, itemIdx: 0 });

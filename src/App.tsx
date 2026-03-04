@@ -11,6 +11,7 @@ import SavedPlans from "./pages/SavedPlans";
 import LocationDetail from "./pages/LocationDetail";
 import Auth from "./pages/Auth";
 import Premium from "./pages/Premium";
+import Checkout from "./pages/Checkout";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import MobileNav from "./components/MobileNav";

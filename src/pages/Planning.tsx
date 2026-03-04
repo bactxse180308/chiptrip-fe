@@ -6,6 +6,7 @@ import { Slider } from "@/components/ui/slider";
 import { Search, CalendarDays, Wallet, Heart, UtensilsCrossed, Camera, Mountain, ArrowRight, ArrowLeft, Sparkles, Loader2, Users } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { generateTrip } from "@/lib/trip-data";
+import { useAuth } from "@/hooks/useAuth";
 
 const travelStyles = [
   { id: "healing", label: "Chữa lành", icon: Heart, emoji: "🧘" },
@@ -16,14 +17,14 @@ const travelStyles = [
 
 const Planning = () => {
   const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
 
-  // Auth guard: check if user is "logged in" (mock with localStorage)
+  // Auth guard: redirect to login if not authenticated
   useEffect(() => {
-    const isLoggedIn = localStorage.getItem("chiptrip_logged_in");
-    if (!isLoggedIn) {
+    if (!authLoading && !user) {
       navigate("/auth", { state: { from: "/planning" } });
     }
-  }, [navigate]);
+  }, [user, authLoading, navigate]);
 
   const [step, setStep] = useState(0);
   const [destination, setDestination] = useState("");

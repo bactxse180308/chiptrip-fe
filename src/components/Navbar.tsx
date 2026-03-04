@@ -1,12 +1,15 @@
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { MapPin, User, Zap, Moon, Sun, Crown } from "lucide-react";
+import { MapPin, User, Zap, Moon, Sun, Crown, LogOut } from "lucide-react";
 import { getCredits } from "@/lib/trip-data";
 import { useEffect, useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 
 const Navbar = () => {
   const location = useLocation();
   const credits = getCredits();
+  const { user, profile, signOut } = useAuth();
   const [dark, setDark] = useState(() => {
     if (typeof window !== "undefined") {
       return document.documentElement.classList.contains("dark");
@@ -30,6 +33,11 @@ const Navbar = () => {
       setDark(true);
     }
   }, []);
+
+  const handleSignOut = async () => {
+    await signOut();
+    toast.success("Đã đăng xuất");
+  };
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/50">
@@ -70,12 +78,25 @@ const Navbar = () => {
               Chuyến đi của tôi
             </Button>
           </Link>
-          <Link to="/auth">
-            <Button variant="soft" size="sm">
-              <User className="w-4 h-4" />
-              <span className="hidden sm:inline">Đăng nhập</span>
-            </Button>
-          </Link>
+
+          {user ? (
+            <div className="flex items-center gap-2">
+              <span className="hidden sm:inline text-sm font-medium text-foreground truncate max-w-[120px]">
+                {profile?.display_name || user.email?.split("@")[0]}
+              </span>
+              <Button variant="soft" size="sm" onClick={handleSignOut}>
+                <LogOut className="w-4 h-4" />
+                <span className="hidden sm:inline">Đăng xuất</span>
+              </Button>
+            </div>
+          ) : (
+            <Link to="/auth">
+              <Button variant="soft" size="sm">
+                <User className="w-4 h-4" />
+                <span className="hidden sm:inline">Đăng nhập</span>
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
     </nav>

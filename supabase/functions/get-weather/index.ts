@@ -38,7 +38,7 @@ serve(async (req) => {
       });
     }
 
-    const { latitude, longitude, name } = geoData.results[0];
+    const { latitude, longitude, name } = geoResult;
 
     // Get weather forecast
     const weatherRes = await fetch(

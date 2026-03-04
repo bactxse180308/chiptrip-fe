@@ -11,6 +11,7 @@ const categories = [
   { id: "hotel", label: "Khách sạn", icon: Hotel, emoji: "🏨" },
   { id: "attraction", label: "Tham quan", icon: Camera, emoji: "📸" },
   { id: "cafe", label: "Cafe", icon: Coffee, emoji: "☕" },
+  { id: "transport", label: "Di chuyển", icon: MapPin, emoji: "🚗" },
 ];
 
 // Mock alternatives generator
@@ -36,6 +37,12 @@ function generateAlternatives(item: TripItem, category: string): TripItem[] {
       { title: "Cafe Cộng", desc: "Phong cách retro độc đáo", cost: "45K" },
       { title: "Highlands Coffee", desc: "Phổ biến, wifi mạnh", cost: "50K" },
     ],
+    transport: [
+      { title: "Xe Limousine VIP", desc: "Ghế massage, wifi, nước uống", cost: "350K" },
+      { title: "Xe giường nằm", desc: "Tiết kiệm, thoải mái", cost: "200K" },
+      { title: "Xe khách Phương Trang", desc: "Hãng uy tín, đúng giờ", cost: "250K" },
+      { title: "Thuê xe máy", desc: "Tự do khám phá, linh hoạt", cost: "150K/ngày" },
+    ],
   };
 
   const resolvedCategory = category === "same" ? (item.bookingType || "attraction") : category;
@@ -47,6 +54,7 @@ function generateAlternatives(item: TripItem, category: string): TripItem[] {
     title: alt.title,
     desc: alt.desc,
     cost: alt.cost,
+    bookingType: (category === "same" ? item.bookingType : category) as TripItem["bookingType"],
   }));
 }
 

@@ -121,6 +121,7 @@ const Premium = () => {
                   variant={plan.active ? "soft" : plan.popular ? "hero" : "soft"}
                   className="w-full"
                   disabled={plan.active}
+                  onClick={() => !plan.active && navigate(`/checkout?plan=${plan.name === "Premium" ? "premium" : "pro"}`)}
                 >
                   {plan.active ? "Đang dùng" : plan.cta}
                 </Button>

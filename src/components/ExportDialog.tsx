@@ -28,7 +28,7 @@ const ExportDialog = ({ trip, children }: Props) => {
     await new Promise(r => setTimeout(r, 1500));
 
     if (type === "link") {
-      await navigator.clipboard.writeText(`${window.location.origin}/result?shared=${trip.id}`);
+      await navigator.clipboard.writeText(`${window.location.origin}/result?id=${trip.id}`);
       toast.success("Đã sao chép link chia sẻ!");
     } else if (type === "pdf") {
       toast.success("PDF đang được tạo!", { description: "Tính năng sẽ hoạt động đầy đủ khi kết nối backend" });

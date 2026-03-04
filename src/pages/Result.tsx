@@ -6,30 +6,24 @@ import { MapPin, Clock, Wallet, Star, Bookmark, Share2, Check, Download, Externa
 import { useState } from "react";
 import { toast } from "sonner";
 import Navbar from "@/components/Navbar";
-import { generateTrip, saveTrip, generatePackingList, type TripPlan, type TripItem } from "@/lib/trip-data";
+import { generateTrip, generatePackingList, type TripPlan, type TripItem } from "@/lib/trip-data";
 import PackingList from "@/components/PackingList";
 import ExportDialog from "@/components/ExportDialog";
 import SuggestAlternativeModal from "@/components/SuggestAlternativeModal";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 
 const bookingIcons: Record<string, React.ElementType> = {
-  hotel: Hotel,
-  restaurant: UtensilsCrossed,
-  attraction: Ticket,
-  cafe: Coffee,
-  transport: MapPin,
+  hotel: Hotel, restaurant: UtensilsCrossed, attraction: Ticket, cafe: Coffee, transport: MapPin,
 };
-
 const bookingLabels: Record<string, string> = {
-  hotel: "Đặt phòng",
-  restaurant: "Xem quán",
-  attraction: "Mua vé",
-  cafe: "Xem quán",
-  transport: "Đặt xe",
+  hotel: "Đặt phòng", restaurant: "Xem quán", attraction: "Mua vé", cafe: "Xem quán", transport: "Đặt xe",
 };
 
 const Result = () => {
   const navigate = useNavigate();
   const { state } = useLocation();
+  const { user } = useAuth();
   const [saved, setSaved] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [swapModal, setSwapModal] = useState<{ open: boolean; item: TripItem | null; dayIdx: number; itemIdx: number }>({ open: false, item: null, dayIdx: 0, itemIdx: 0 });
@@ -46,20 +40,36 @@ const Result = () => {
     }).filter(Boolean)
   );
 
-  // Build map pins URL
   const mapPins = trip.days.flatMap(d => d.items).filter(i => i.address);
   const mapQuery = mapPins.length > 0
     ? mapPins.map(i => i.address || i.title).join("|")
     : trip.destination + " du lịch";
   const mapSrc = `https://www.google.com/maps/embed/v1/search?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q=${encodeURIComponent(mapQuery)}&zoom=12`;
 
-  const handleSave = () => {
-    saveTrip(trip);
-    setSaved(true);
-    toast.success("Đã lưu kế hoạch!", {
-      description: "Xem lại trong \"Chuyến đi của tôi\"",
-      action: { label: "Xem ngay", onClick: () => navigate("/saved") },
-    });
+  const handleSave = async () => {
+    if (!user) {
+      toast.error("Vui lòng đăng nhập để lưu lịch trình");
+      navigate("/auth", { state: { from: "/result" } });
+      return;
+    }
+
+    try {
+      const { error } = await supabase.from("trips").insert({
+        user_id: user.id,
+        destination: trip.destination,
+        start_date: trip.days[0]?.date || null,
+        end_date: trip.days[trip.days.length - 1]?.date || null,
+        trip_data: trip as any,
+      });
+      if (error) throw error;
+      setSaved(true);
+      toast.success("Đã lưu kế hoạch!", {
+        description: "Xem lại trong \"Chuyến đi của tôi\"",
+        action: { label: "Xem ngay", onClick: () => navigate("/saved") },
+      });
+    } catch (error: any) {
+      toast.error("Lưu thất bại: " + (error.message || "Có lỗi xảy ra"));
+    }
   };
 
   const handleShare = async () => {
@@ -80,13 +90,25 @@ const Result = () => {
     else { window.open(`https://www.google.com/search?q=${encodeURIComponent(item.title + " " + (item.address || trip.destination))}`, "_blank"); }
   };
 
-  const handleClone = () => {
+  const handleClone = async () => {
+    if (!user) {
+      toast.error("Vui lòng đăng nhập để clone lịch trình");
+      return;
+    }
     const cloned: TripPlan = { ...trip, id: Date.now().toString(), title: trip.title + " (bản sao)" };
-    saveTrip(cloned);
-    toast.success("Đã clone lịch trình!", {
-      description: "Bản sao đã được lưu vào \"Chuyến đi của tôi\"",
-      action: { label: "Xem ngay", onClick: () => navigate("/saved") },
-    });
+    try {
+      await supabase.from("trips").insert({
+        user_id: user.id,
+        destination: cloned.destination,
+        trip_data: cloned as any,
+      });
+      toast.success("Đã clone lịch trình!", {
+        description: "Bản sao đã được lưu vào \"Chuyến đi của tôi\"",
+        action: { label: "Xem ngay", onClick: () => navigate("/saved") },
+      });
+    } catch {
+      toast.error("Clone thất bại");
+    }
   };
 
   const handleDeleteItem = (dayIdx: number, itemIdx: number) => {
@@ -134,18 +156,9 @@ const Result = () => {
             <div className="lg:col-span-2">
               <div className="sticky top-24 space-y-4">
                 <div className="rounded-2xl overflow-hidden border border-border bg-card shadow-card h-[50vh]">
-                  <iframe
-                    title="Bản đồ lịch trình"
-                    width="100%"
-                    height="100%"
-                    style={{ border: 0 }}
-                    loading="lazy"
-                    referrerPolicy="no-referrer-when-downgrade"
-                    src={mapSrc}
-                  />
+                  <iframe title="Bản đồ lịch trình" width="100%" height="100%" style={{ border: 0 }} loading="lazy" referrerPolicy="no-referrer-when-downgrade" src={mapSrc} />
                 </div>
 
-                {/* Cost breakdown card */}
                 <div className="rounded-2xl border border-border bg-card shadow-card p-5 space-y-3">
                   <h3 className="font-display font-bold text-foreground flex items-center gap-2">
                     <Wallet className="w-4 h-4 text-chip-orange" /> Dự toán chi phí
@@ -170,7 +183,6 @@ const Result = () => {
                   </div>
                 </div>
 
-                {/* Insurance upsell */}
                 <div className="rounded-2xl border border-chip-yellow/30 bg-gradient-warm p-5 space-y-3">
                   <div className="flex items-center gap-3">
                     <span className="text-2xl">🛡️</span>
@@ -189,12 +201,7 @@ const Result = () => {
 
             {/* Right - Timeline + Tabs */}
             <div className="lg:col-span-3 space-y-6">
-              {/* Header */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-card rounded-2xl p-6 border border-border shadow-card"
-              >
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-card rounded-2xl p-6 border border-border shadow-card">
                 <div className="flex items-start justify-between flex-wrap gap-4">
                   <div>
                     <h1 className="text-2xl font-bold text-foreground">{trip.title} 🏖️</h1>
@@ -206,9 +213,7 @@ const Result = () => {
                   </div>
                   <div className="flex gap-2 flex-wrap">
                     <Button variant="soft" size="sm" onClick={handleShare}><Share2 className="w-4 h-4" /></Button>
-                    <ExportDialog trip={trip}>
-                      <Button variant="soft" size="sm"><Download className="w-4 h-4" /></Button>
-                    </ExportDialog>
+                    <ExportDialog trip={trip}><Button variant="soft" size="sm"><Download className="w-4 h-4" /></Button></ExportDialog>
                     <Button variant="soft" size="sm" onClick={handleClone}><Copy className="w-4 h-4" /> Clone</Button>
                     <Button variant={editMode ? "hero" : "soft"} size="sm" onClick={() => setEditMode(!editMode)}>
                       {editMode ? <Check className="w-4 h-4" /> : <GripVertical className="w-4 h-4" />}
@@ -222,7 +227,6 @@ const Result = () => {
                 </div>
               </motion.div>
 
-              {/* Tabs: Lịch trình / Chuẩn bị đồ */}
               <Tabs defaultValue="itinerary" className="w-full">
                 <TabsList className="w-full grid grid-cols-2">
                   <TabsTrigger value="itinerary">📋 Lịch trình</TabsTrigger>
@@ -231,13 +235,7 @@ const Result = () => {
 
                 <TabsContent value="itinerary" className="space-y-6 mt-4">
                   {trip.days.map((day, dayIdx) => (
-                    <motion.div
-                      key={day.day}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: dayIdx * 0.15 }}
-                      className="space-y-3"
-                    >
+                    <motion.div key={day.day} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: dayIdx * 0.15 }} className="space-y-3">
                       <div className="flex items-center gap-3">
                         <div className="px-4 py-1.5 rounded-full bg-gradient-accent">
                           <span className="text-sm font-bold text-accent-foreground">{day.day}</span>
@@ -311,7 +309,6 @@ const Result = () => {
         </div>
       </div>
 
-      {/* Suggest Alternative Modal */}
       <SuggestAlternativeModal
         open={swapModal.open}
         onClose={() => setSwapModal(prev => ({ ...prev, open: false }))}

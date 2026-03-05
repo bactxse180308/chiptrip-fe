@@ -66,19 +66,19 @@ const Result = () => {
     }
   }, []);
 
-  const packingItems = generatePackingList(
+  const packingItems = trip ? generatePackingList(
     trip.destination,
     trip.days.length,
     trip.tags.map(t => {
       const map: Record<string, string> = { "Chữa lành": "healing", "Ẩm thực": "food", "Sống ảo": "photo", "Mạo hiểm": "adventure" };
       return map[t] || "";
     }).filter(Boolean)
-  );
+  ) : [];
 
-  const mapPins = trip.days.flatMap(d => d.items).filter(i => i.address);
+  const mapPins = trip ? trip.days.flatMap(d => d.items).filter(i => i.address) : [];
   const mapQuery = mapPins.length > 0
     ? mapPins.map(i => i.address || i.title).join("|")
-    : trip.destination + " du lịch";
+    : (trip?.destination || "Việt Nam") + " du lịch";
   const mapSrc = `https://www.google.com/maps/embed/v1/search?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q=${encodeURIComponent(mapQuery)}&zoom=12`;
 
   const handleSave = async () => {

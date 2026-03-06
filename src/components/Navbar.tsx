@@ -1,10 +1,11 @@
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { MapPin, User, Zap, Moon, Sun, Crown, LogOut } from "lucide-react";
+import { MapPin, User, Zap, Moon, Sun, Crown, LogOut, Settings, UserCircle } from "lucide-react";
 import { getCredits } from "@/lib/trip-data";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { motion, AnimatePresence } from "framer-motion";
 
 const Navbar = () => {
   const location = useLocation();
@@ -16,6 +17,8 @@ const Navbar = () => {
     }
     return false;
   });
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (dark) {
@@ -34,10 +37,26 @@ const Navbar = () => {
     }
   }, []);
 
+  // Close menu on click outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const handleSignOut = async () => {
+    setMenuOpen(false);
     await signOut();
     toast.success("Đã đăng xuất");
   };
+
+  const displayName = profile?.display_name || user?.email?.split("@")[0] || "";
+  const avatarUrl = profile?.avatar_url;
+  const initial = (displayName || "U")[0].toUpperCase();
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/50">
@@ -53,11 +72,13 @@ const Navbar = () => {
 
         <div className="flex items-center gap-2 sm:gap-3">
           {/* Credits badge */}
-          <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-chip-yellow-light border border-chip-yellow/30">
-            <Zap className="w-3.5 h-3.5 text-chip-orange" />
-            <span className="text-xs font-bold text-foreground">{credits}</span>
-            <span className="text-xs text-muted-foreground">lượt AI</span>
-          </div>
+          {user && (
+            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-chip-yellow-light border border-chip-yellow/30">
+              <Zap className="w-3.5 h-3.5 text-chip-orange" />
+              <span className="text-xs font-bold text-foreground">{credits}</span>
+              <span className="text-xs text-muted-foreground">lượt AI</span>
+            </div>
+          )}
 
           {/* Dark mode toggle */}
           <button
@@ -80,14 +101,91 @@ const Navbar = () => {
           </Link>
 
           {user ? (
-            <div className="flex items-center gap-2">
-              <Link to="/profile" className="hidden sm:inline text-sm font-medium text-foreground truncate max-w-[120px] hover:text-chip-orange transition-colors">
-                {profile?.display_name || user.email?.split("@")[0]}
-              </Link>
-              <Button variant="soft" size="sm" onClick={handleSignOut}>
-                <LogOut className="w-4 h-4" />
-                <span className="hidden sm:inline">Đăng xuất</span>
-              </Button>
+            <div className="relative" ref={menuRef}>
+              <button
+                onClick={() => setMenuOpen(!menuOpen)}
+                className="flex items-center justify-center w-9 h-9 rounded-full overflow-hidden border-2 border-border hover:border-primary/50 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/30"
+                aria-label="Menu tài khoản"
+              >
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full bg-primary/15 flex items-center justify-center text-sm font-bold text-primary">
+                    {initial}
+                  </div>
+                )}
+              </button>
+
+              <AnimatePresence>
+                {menuOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: -4 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute right-0 mt-2 w-56 bg-card rounded-2xl border border-border shadow-lg overflow-hidden z-50"
+                  >
+                    {/* User info header */}
+                    <div className="px-4 py-3 border-b border-border bg-muted/30">
+                      <div className="flex items-center gap-3">
+                        {avatarUrl ? (
+                          <img src={avatarUrl} alt="" className="w-10 h-10 rounded-full object-cover" />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center text-base font-bold text-primary">
+                            {initial}
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-foreground truncate">{displayName}</p>
+                          <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Menu items */}
+                    <div className="py-1">
+                      <Link
+                        to="/profile"
+                        onClick={() => setMenuOpen(false)}
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-foreground hover:bg-muted/50 transition-colors"
+                      >
+                        <UserCircle className="w-4 h-4 text-muted-foreground" />
+                        Trang cá nhân
+                      </Link>
+                      <Link
+                        to="/saved"
+                        onClick={() => setMenuOpen(false)}
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-foreground hover:bg-muted/50 transition-colors sm:hidden"
+                      >
+                        <MapPin className="w-4 h-4 text-muted-foreground" />
+                        Chuyến đi của tôi
+                      </Link>
+                      <Link
+                        to="/premium"
+                        onClick={() => setMenuOpen(false)}
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-foreground hover:bg-muted/50 transition-colors"
+                      >
+                        <Crown className="w-4 h-4 text-chip-orange" />
+                        <span>Nâng cấp Premium</span>
+                        {credits > 0 && (
+                          <span className="ml-auto text-xs font-bold text-chip-orange bg-chip-yellow-light px-2 py-0.5 rounded-full">{credits}</span>
+                        )}
+                      </Link>
+                    </div>
+
+                    {/* Sign out */}
+                    <div className="border-t border-border py-1">
+                      <button
+                        onClick={handleSignOut}
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-destructive hover:bg-destructive/10 transition-colors w-full text-left"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        Đăng xuất
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           ) : (
             <Link to="/auth">

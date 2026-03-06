@@ -19,7 +19,7 @@ const travelPrefs = [
 
 const Profile = () => {
   const navigate = useNavigate();
-  const { user, profile, loading: authLoading } = useAuth();
+  const { user, profile, loading: authLoading, isAdmin } = useAuth();
   const [displayName, setDisplayName] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [preferences, setPreferences] = useState<string[]>([]);
@@ -44,22 +44,25 @@ const Profile = () => {
 
   useEffect(() => {
     if (user) {
-      supabase
-        .from("profiles")
-        .select("travel_preferences")
-        .eq("user_id", user.id)
-        .single()
-        .then(({ data }) => {
-          if (data?.travel_preferences) {
-            setPreferences(data.travel_preferences as string[]);
-          }
-        });
-      supabase
-        .from("trips")
-        .select("id", { count: "exact", head: true })
-        .then(({ count }) => setTripCount(count || 0));
+      if (!isAdmin) {
+        supabase
+          .from("profiles")
+          .select("travel_preferences")
+          .eq("user_id", user.id)
+          .single()
+          .then(({ data }) => {
+            if (data?.travel_preferences) {
+              setPreferences(data.travel_preferences as string[]);
+            }
+          });
+        supabase
+          .from("trips")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", user.id)
+          .then(({ count }) => setTripCount(count || 0));
+      }
     }
-  }, [user]);
+  }, [user, isAdmin]);
 
   const togglePref = (id: string) => {
     setPreferences(prev => prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]);
@@ -189,17 +192,24 @@ const Profile = () => {
               <div className="text-center">
                 <h1 className="text-2xl font-bold text-foreground">{displayName || "Chưa đặt tên"}</h1>
                 <p className="text-sm text-muted-foreground">{user?.email}</p>
+                {isAdmin && (
+                  <span className="inline-flex items-center gap-1 mt-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold">
+                    🛡️ Quản trị viên
+                  </span>
+                )}
               </div>
-              <div className="flex gap-6 text-center">
-                <div>
-                  <p className="text-2xl font-bold text-gradient">{tripCount}</p>
-                  <p className="text-xs text-muted-foreground">Chuyến đi</p>
+              {!isAdmin && (
+                <div className="flex gap-6 text-center">
+                  <div>
+                    <p className="text-2xl font-bold text-gradient">{tripCount}</p>
+                    <p className="text-xs text-muted-foreground">Chuyến đi</p>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-gradient">{preferences.length}</p>
+                    <p className="text-xs text-muted-foreground">Sở thích</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-2xl font-bold text-gradient">{preferences.length}</p>
-                  <p className="text-xs text-muted-foreground">Sở thích</p>
-                </div>
-              </div>
+              )}
             </div>
 
             {/* Form */}
@@ -220,26 +230,28 @@ const Profile = () => {
                 </div>
               </div>
 
-              <div>
-                <Label className="text-foreground font-medium mb-2 block flex items-center gap-2">
-                  <Heart className="w-4 h-4 text-chip-orange" /> Sở thích du lịch
-                </Label>
-                <div className="grid grid-cols-2 gap-3">
-                  {travelPrefs.map(p => (
-                    <button
-                      key={p.id}
-                      onClick={() => togglePref(p.id)}
-                      className={`flex items-center gap-2 px-4 py-3 rounded-xl border-2 text-sm font-medium transition-all ${
-                        preferences.includes(p.id)
-                          ? "border-chip-orange bg-chip-orange/10 text-chip-orange"
-                          : "border-border bg-background text-muted-foreground hover:border-chip-orange/40"
-                      }`}
-                    >
-                      <span>{p.emoji}</span> {p.label}
-                    </button>
-                  ))}
+              {!isAdmin && (
+                <div>
+                  <Label className="text-foreground font-medium mb-2 block flex items-center gap-2">
+                    <Heart className="w-4 h-4 text-chip-orange" /> Sở thích du lịch
+                  </Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {travelPrefs.map(p => (
+                      <button
+                        key={p.id}
+                        onClick={() => togglePref(p.id)}
+                        className={`flex items-center gap-2 px-4 py-3 rounded-xl border-2 text-sm font-medium transition-all ${
+                          preferences.includes(p.id)
+                            ? "border-chip-orange bg-chip-orange/10 text-chip-orange"
+                            : "border-border bg-background text-muted-foreground hover:border-chip-orange/40"
+                        }`}
+                      >
+                        <span>{p.emoji}</span> {p.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             <Button variant="hero" className="w-full h-12 rounded-xl" onClick={handleSave} disabled={saving}>

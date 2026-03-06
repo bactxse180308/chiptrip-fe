@@ -26,16 +26,16 @@ const plans = [
     name: "Premium",
     price: "49K",
     period: "/1 lượt",
-    features: ["1 lượt tạo lịch trình AI", "Đề xuất thay thế thông minh", "Lịch trình chi tiết", "Export PDF + Ảnh", "Bảo hiểm du lịch giảm 20%"],
-    cta: "Nâng cấp ngay",
+    features: ["1 lượt tạo lịch trình AI", "Lịch trình chi tiết theo giờ", "Đề xuất thay thế địa điểm", "Export PDF + Ảnh"],
+    cta: "Mua ngay",
     popular: true,
   },
   {
     name: "Pro Traveler",
     price: "109K",
     period: "/3 lượt",
-    features: ["3 lượt tạo lịch trình AI", "Đề xuất khách sạn + deal ẩn", "Hỗ trợ 24/7", "Chia sẻ lịch trình nhóm", "Early access tính năng mới"],
-    cta: "Nâng cấp ngay",
+    features: ["3 lượt tạo lịch trình AI", "Tất cả tính năng Premium", "Chia sẻ & lên kế hoạch nhóm", "Chia tiền nhóm tự động", "Hỗ trợ ưu tiên 24/7"],
+    cta: "Mua ngay",
   },
 ];
 

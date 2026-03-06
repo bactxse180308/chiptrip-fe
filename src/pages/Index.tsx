@@ -8,15 +8,17 @@ import tripDanang from "@/assets/trip-danang.jpg";
 import tripSapa from "@/assets/trip-sapa.jpg";
 import tripPhuquoc from "@/assets/trip-phuquoc.jpg";
 import tripHoian from "@/assets/trip-hoian.jpg";
+import tripHalong from "@/assets/trip-halong.jpg";
+import tripDalat from "@/assets/trip-dalat.jpg";
 import Navbar from "@/components/Navbar";
 
 const heroDestinations = [
-  { name: "Vịnh Hạ Long", info: "3 ngày • 2.5M VNĐ • Chữa lành" },
-  { name: "Đà Nẵng", info: "3 ngày • 3M VNĐ • Biển & ẩm thực" },
-  { name: "Sapa", info: "3 ngày • 4M VNĐ • Mạo hiểm" },
-  { name: "Phú Quốc", info: "4 ngày • 5M VNĐ • Nghỉ dưỡng" },
-  { name: "Hội An", info: "2 ngày • 2M VNĐ • Sống ảo" },
-  { name: "Đà Lạt", info: "3 ngày • 3M VNĐ • Chữa lành" },
+  { name: "Vịnh Hạ Long", info: "3 ngày • 2.5M VNĐ • Chữa lành", image: tripHalong },
+  { name: "Đà Nẵng", info: "3 ngày • 3M VNĐ • Biển & ẩm thực", image: tripDanang },
+  { name: "Sapa", info: "3 ngày • 4M VNĐ • Mạo hiểm", image: tripSapa },
+  { name: "Phú Quốc", info: "4 ngày • 5M VNĐ • Nghỉ dưỡng", image: tripPhuquoc },
+  { name: "Hội An", info: "2 ngày • 2M VNĐ • Sống ảo", image: tripHoian },
+  { name: "Đà Lạt", info: "3 ngày • 3M VNĐ • Chữa lành", image: tripDalat },
 ];
 
 const popularDestinations = [
@@ -106,11 +108,18 @@ const [heroIndex, setHeroIndex] = useState(0);
             className="relative hidden lg:block"
           >
             <div className="relative rounded-3xl overflow-hidden shadow-warm">
-              <img
-                src={heroImage}
-                alt="Du lịch Việt Nam - Vịnh Hạ Long"
-                className="w-full h-[500px] object-cover"
-              />
+              <AnimatePresence mode="wait">
+                <motion.img
+                  key={heroIndex}
+                  initial={{ opacity: 0, scale: 1.05 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.6 }}
+                  src={heroDestinations[heroIndex].image}
+                  alt={heroDestinations[heroIndex].name}
+                  className="w-full h-[500px] object-cover"
+                />
+              </AnimatePresence>
               <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
 
               <div className="absolute bottom-6 left-6 right-6 bg-background/90 backdrop-blur-md rounded-2xl p-4 shadow-card overflow-hidden">

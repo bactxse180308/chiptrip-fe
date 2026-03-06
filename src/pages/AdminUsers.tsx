@@ -347,9 +347,11 @@ const AdminUsers = () => {
                             <TableCell>
                               <div className="flex items-center gap-3">
                                 {u.avatar_url ? (
-                                  <img src={u.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover" />
+                                  <button onClick={() => setPreviewAvatar({ url: u.avatar_url!, name: u.display_name || u.email || "User" })} className="shrink-0">
+                                    <img src={u.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover hover:ring-2 hover:ring-primary/50 transition-all cursor-pointer" />
+                                  </button>
                                 ) : (
-                                  <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">
+                                  <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary shrink-0">
                                     {(u.display_name || u.email || "?")[0].toUpperCase()}
                                   </div>
                                 )}

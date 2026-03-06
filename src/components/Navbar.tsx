@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from "framer-motion";
 const Navbar = () => {
   const location = useLocation();
   const credits = getCredits();
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, signOut, isAdmin } = useAuth();
   const [dark, setDark] = useState(() => {
     if (typeof window !== "undefined") {
       return document.documentElement.classList.contains("dark");
@@ -89,16 +89,26 @@ const Navbar = () => {
             {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </button>
 
-          <Link to="/premium">
-            <Button variant="ghost" size="sm" className="hidden sm:inline-flex gap-1.5 text-chip-orange hover:text-chip-orange">
-              <Crown className="w-4 h-4" /> Premium
-            </Button>
-          </Link>
-          <Link to="/saved">
-            <Button variant="ghost" size="sm" className={`hidden sm:inline-flex ${location.pathname === "/saved" ? "bg-chip-yellow-light" : ""}`}>
-              Chuyến đi của tôi
-            </Button>
-          </Link>
+          {!isAdmin && (
+            <Link to="/premium">
+              <Button variant="ghost" size="sm" className="hidden sm:inline-flex gap-1.5 text-chip-orange hover:text-chip-orange">
+                <Crown className="w-4 h-4" /> Premium
+              </Button>
+            </Link>
+          )}
+          {isAdmin ? (
+            <Link to="/admin/users">
+              <Button variant="ghost" size="sm" className="hidden sm:inline-flex gap-1.5">
+                <Settings className="w-4 h-4" /> Quản trị
+              </Button>
+            </Link>
+          ) : (
+            <Link to="/saved">
+              <Button variant="ghost" size="sm" className={`hidden sm:inline-flex ${location.pathname === "/saved" ? "bg-chip-yellow-light" : ""}`}>
+                Chuyến đi của tôi
+              </Button>
+            </Link>
+          )}
 
           {user ? (
             <div className="relative" ref={menuRef}>

@@ -1,19 +1,26 @@
 import { Link, useLocation } from "react-router-dom";
-import { Home, Map, Bookmark, User } from "lucide-react";
+import { Home, Map, Bookmark, User, Shield } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
 const MobileNav = () => {
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
 
-  const links = [
+  // Hide on admin pages
+  if (location.pathname.startsWith("/admin")) return null;
+
+  const userLinks = [
     { path: "/", label: "Trang chủ", icon: Home },
     { path: "/planning", label: "Tạo mới", icon: Map },
     { path: "/saved", label: "Đã lưu", icon: Bookmark },
   ];
 
-  // Hide on admin pages
-  if (location.pathname.startsWith("/admin")) return null;
+  const adminLinks = [
+    { path: "/", label: "Trang chủ", icon: Home },
+    { path: "/admin/users", label: "Quản trị", icon: Shield },
+  ];
+
+  const links = isAdmin ? adminLinks : userLinks;
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/90 backdrop-blur-md border-t border-border/50 sm:hidden">

@@ -103,6 +103,7 @@ const AdminUsers = () => {
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [logsLoading, setLogsLoading] = useState(false);
   const [contentLoading, setContentLoading] = useState(false);
+  const [previewAvatar, setPreviewAvatar] = useState<{ url: string; name: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [searchUser, setSearchUser] = useState("");
   const [searchTrip, setSearchTrip] = useState("");

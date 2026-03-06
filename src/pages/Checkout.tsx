@@ -339,7 +339,7 @@ const Checkout = () => {
                 </div>
 
                 <p className="text-xs text-muted-foreground">
-                  Tự động gia hạn mỗi tháng. Hủy bất cứ lúc nào.
+                  Gói lượt AI sẽ được cộng ngay sau khi thanh toán thành công.
                 </p>
               </div>
             </div>

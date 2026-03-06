@@ -160,17 +160,6 @@ const Navbar = () => {
                         <MapPin className="w-4 h-4 text-muted-foreground" />
                         Chuyến đi của tôi
                       </Link>
-                      <Link
-                        to="/premium"
-                        onClick={() => setMenuOpen(false)}
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-foreground hover:bg-muted/50 transition-colors"
-                      >
-                        <Crown className="w-4 h-4 text-chip-orange" />
-                        <span>Nâng cấp Premium</span>
-                        {credits > 0 && (
-                          <span className="ml-auto text-xs font-bold text-chip-orange bg-chip-yellow-light px-2 py-0.5 rounded-full">{credits}</span>
-                        )}
-                      </Link>
                     </div>
 
                     {/* Sign out */}

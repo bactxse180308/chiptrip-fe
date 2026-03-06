@@ -332,8 +332,8 @@ export function renameTrip(id: string, newTitle: string) {
 // Credits system (mock)
 export function getCredits(): number {
   try {
-    return parseInt(localStorage.getItem("chiptrip_credits") || "5", 10);
-  } catch { return 5; }
+    return parseInt(localStorage.getItem("chiptrip_credits") || "0", 10);
+  } catch { return 0; }
 }
 
 export function useCredit(): boolean {

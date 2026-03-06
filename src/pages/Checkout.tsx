@@ -12,17 +12,17 @@ import { addCredits } from "@/lib/trip-data";
 const planDetails: Record<string, { name: string; price: string; period: string; credits: number; features: string[] }> = {
   premium: {
     name: "Premium",
-    price: "79,000",
+    price: "49,000",
     period: "/gói",
-    credits: 3,
-    features: ["3 lượt tạo lịch trình AI", "Đề xuất thay thế thông minh", "Lịch trình chi tiết", "Export PDF + Ảnh", "Bảo hiểm du lịch giảm 20%"],
+    credits: 1,
+    features: ["1 lượt tạo lịch trình AI", "Đề xuất thay thế thông minh", "Lịch trình chi tiết", "Export PDF + Ảnh", "Bảo hiểm du lịch giảm 20%"],
   },
   pro: {
     name: "Pro Traveler",
-    price: "199,000",
+    price: "109,000",
     period: "/gói",
-    credits: 5,
-    features: ["5 lượt tạo lịch trình AI", "Đề xuất khách sạn + deal ẩn", "Hỗ trợ 24/7", "Chia sẻ lịch trình nhóm", "Early access tính năng mới"],
+    credits: 3,
+    features: ["3 lượt tạo lịch trình AI", "Đề xuất khách sạn + deal ẩn", "Hỗ trợ 24/7", "Chia sẻ lịch trình nhóm", "Early access tính năng mới"],
   },
 };
 

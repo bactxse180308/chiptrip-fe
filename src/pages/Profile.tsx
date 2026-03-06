@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,6 +26,7 @@ const Profile = () => {
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [tripCount, setTripCount] = useState(0);
+  const [showAvatarPreview, setShowAvatarPreview] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -150,7 +151,12 @@ const Profile = () => {
             <div className="flex flex-col items-center gap-4">
               <div className="relative group">
                 {avatarUrl ? (
-                  <img src={avatarUrl} alt="Avatar" className="w-24 h-24 rounded-full object-cover border-4 border-primary/20" />
+                  <img
+                    src={avatarUrl}
+                    alt="Avatar"
+                    className="w-24 h-24 rounded-full object-cover border-4 border-primary/20 cursor-pointer"
+                    onClick={() => setShowAvatarPreview(true)}
+                  />
                 ) : (
                   <div className="w-24 h-24 rounded-full bg-gradient-accent flex items-center justify-center text-3xl font-bold text-accent-foreground">
                     {initials}
@@ -243,6 +249,33 @@ const Profile = () => {
           </motion.div>
         </div>
       </div>
+
+      {/* Avatar preview modal */}
+      <AnimatePresence>
+        {showAvatarPreview && avatarUrl && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={() => setShowAvatarPreview(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              className="bg-card rounded-3xl border border-border shadow-xl p-6 max-w-sm w-full text-center"
+              onClick={e => e.stopPropagation()}
+            >
+              <img src={avatarUrl} alt="Avatar" className="w-48 h-48 rounded-full object-cover mx-auto border-4 border-primary/20 mb-4" />
+              <p className="text-lg font-semibold text-foreground">{displayName || "Avatar"}</p>
+              <Button variant="ghost" size="sm" className="mt-4" onClick={() => setShowAvatarPreview(false)}>
+                Đóng
+              </Button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

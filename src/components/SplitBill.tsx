@@ -1,8 +1,7 @@
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Receipt, Plus, Trash2, Users, ArrowRight } from "lucide-react";
+import { Receipt, Plus, Trash2, ArrowRight, ChevronDown, ChevronUp, Check } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -12,6 +11,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface SplitBillProps {
   tripId: string;
@@ -37,12 +37,27 @@ const categoryLabels: Record<string, { label: string; emoji: string }> = {
   other: { label: "Khác", emoji: "📦" },
 };
 
+const formatAmount = (n: number) => {
+  if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
+  if (n >= 1000) return `${Math.round(n / 1000)}K`;
+  return `${n}`;
+};
+
 const SplitBill = ({ tripId, memberNames }: SplitBillProps) => {
   const { user } = useAuth();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [open, setOpen] = useState(false);
   const [adding, setAdding] = useState(false);
-  const [form, setForm] = useState({ title: "", amount: "", category: "food" });
+  const [showSummary, setShowSummary] = useState(false);
+  const [form, setForm] = useState({
+    title: "",
+    amount: "",
+    category: "food",
+    paid_by: "",
+    split_among: [] as string[],
+  });
+
+  const memberIds = Object.keys(memberNames);
 
   const fetchExpenses = async () => {
     const { data } = await supabase
@@ -55,7 +70,25 @@ const SplitBill = ({ tripId, memberNames }: SplitBillProps) => {
 
   const handleOpen = (isOpen: boolean) => {
     setOpen(isOpen);
-    if (isOpen) fetchExpenses();
+    if (isOpen) {
+      fetchExpenses();
+      // Reset form with current user as default payer
+      setForm(f => ({ ...f, paid_by: user?.id || "", split_among: memberIds.length > 0 ? [...memberIds] : [user?.id || ""] }));
+    }
+  };
+
+  const toggleSplitMember = (uid: string) => {
+    setForm(f => ({
+      ...f,
+      split_among: f.split_among.includes(uid)
+        ? f.split_among.filter(id => id !== uid)
+        : [...f.split_among, uid],
+    }));
+  };
+
+  const selectAllMembers = () => {
+    const allIds = memberIds.length > 0 ? memberIds : [user?.id || ""];
+    setForm(f => ({ ...f, split_among: [...allIds] }));
   };
 
   const addExpense = async () => {
@@ -65,22 +98,27 @@ const SplitBill = ({ tripId, memberNames }: SplitBillProps) => {
       toast.error("Số tiền không hợp lệ");
       return;
     }
+    if (form.split_among.length === 0) {
+      toast.error("Chọn ít nhất 1 người để chia");
+      return;
+    }
 
-    const memberIds = Object.keys(memberNames);
+    const paidBy = form.paid_by || user.id;
+
     const { error } = await supabase.from("trip_expenses").insert({
       trip_id: tripId,
-      paid_by: user.id,
+      paid_by: paidBy,
       title: form.title,
       amount,
       category: form.category,
-      split_among: memberIds.length > 0 ? memberIds : [user.id],
+      split_among: form.split_among,
     });
 
     if (error) {
       toast.error("Thêm chi phí thất bại");
     } else {
       toast.success("Đã thêm chi phí");
-      setForm({ title: "", amount: "", category: "food" });
+      setForm({ title: "", amount: "", category: "food", paid_by: user.id, split_among: memberIds.length > 0 ? [...memberIds] : [user.id] });
       setAdding(false);
       fetchExpenses();
     }
@@ -92,15 +130,12 @@ const SplitBill = ({ tripId, memberNames }: SplitBillProps) => {
     toast.success("Đã xóa");
   };
 
-  // Calculate debts
+  // Calculate balances & settlements
   const calculateDebts = () => {
     const balances: Record<string, number> = {};
-    const allMembers = new Set<string>();
 
     expenses.forEach(exp => {
-      allMembers.add(exp.paid_by);
       const splitWith = exp.split_among.length > 0 ? exp.split_among : [exp.paid_by];
-      splitWith.forEach(uid => allMembers.add(uid));
       const perPerson = exp.amount / splitWith.length;
 
       balances[exp.paid_by] = (balances[exp.paid_by] || 0) + exp.amount;
@@ -109,7 +144,6 @@ const SplitBill = ({ tripId, memberNames }: SplitBillProps) => {
       });
     });
 
-    // Simplify debts
     const debtors: { id: string; amount: number }[] = [];
     const creditors: { id: string; amount: number }[] = [];
 
@@ -129,18 +163,26 @@ const SplitBill = ({ tripId, memberNames }: SplitBillProps) => {
       if (creditors[ci].amount < 0.01) ci++;
     }
 
-    return settlements;
+    return { settlements, balances };
   };
 
   const totalExpense = expenses.reduce((sum, e) => sum + e.amount, 0);
-  const settlements = calculateDebts();
+  const { settlements, balances } = calculateDebts();
   const getName = (uid: string) => memberNames[uid] || uid.slice(0, 6) + "...";
 
-  const formatAmount = (n: number) => {
-    if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
-    if (n >= 1000) return `${Math.round(n / 1000)}K`;
-    return `${n}`;
-  };
+  // Per-person totals
+  const perPersonPaid: Record<string, number> = {};
+  const perPersonOwes: Record<string, number> = {};
+  expenses.forEach(exp => {
+    perPersonPaid[exp.paid_by] = (perPersonPaid[exp.paid_by] || 0) + exp.amount;
+    const splitWith = exp.split_among.length > 0 ? exp.split_among : [exp.paid_by];
+    const perPerson = exp.amount / splitWith.length;
+    splitWith.forEach(uid => {
+      perPersonOwes[uid] = (perPersonOwes[uid] || 0) + perPerson;
+    });
+  });
+
+  const allPeople = [...new Set([...Object.keys(perPersonPaid), ...Object.keys(perPersonOwes)])];
 
   return (
     <Dialog open={open} onOpenChange={handleOpen}>
@@ -161,6 +203,7 @@ const SplitBill = ({ tripId, memberNames }: SplitBillProps) => {
           <div className="text-center p-4 rounded-xl bg-gradient-warm border border-chip-yellow/30">
             <p className="text-sm text-muted-foreground">Tổng chi tiêu</p>
             <p className="text-3xl font-bold text-gradient">{formatAmount(totalExpense)} VNĐ</p>
+            <p className="text-xs text-muted-foreground mt-1">{expenses.length} khoản · {allPeople.length} người</p>
           </div>
 
           {/* Settlements */}
@@ -172,17 +215,59 @@ const SplitBill = ({ tripId, memberNames }: SplitBillProps) => {
                   <span className="font-medium text-foreground">{getName(s.from)}</span>
                   <ArrowRight className="w-4 h-4 text-chip-orange" />
                   <span className="font-medium text-foreground">{getName(s.to)}</span>
-                  <span className="ml-auto font-bold text-chip-orange">{formatAmount(s.amount)}</span>
+                  <span className="ml-auto font-bold text-chip-orange">{formatAmount(s.amount)} ₫</span>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* Detailed summary toggle */}
+          {allPeople.length > 0 && (
+            <button
+              onClick={() => setShowSummary(!showSummary)}
+              className="w-full flex items-center justify-between p-3 rounded-xl border border-border bg-card text-sm font-medium text-foreground hover:bg-muted/50 transition-colors"
+            >
+              <span>📊 Chi tiết từng người</span>
+              {showSummary ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
+          )}
+
+          {showSummary && (
+            <div className="space-y-2">
+              {allPeople.map(uid => {
+                const paid = perPersonPaid[uid] || 0;
+                const owes = Math.round(perPersonOwes[uid] || 0);
+                const balance = Math.round(paid - owes);
+                return (
+                  <div key={uid} className="p-3 rounded-xl border border-border bg-card space-y-1">
+                    <p className="text-sm font-semibold text-foreground">{getName(uid)}</p>
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>Đã trả: <span className="text-foreground font-medium">{formatAmount(paid)} ₫</span></span>
+                      <span>Phải chịu: <span className="text-foreground font-medium">{formatAmount(owes)} ₫</span></span>
+                    </div>
+                    <p className={`text-xs font-semibold ${balance > 0 ? 'text-green-600' : balance < 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                      {balance > 0 ? `+${formatAmount(balance)} ₫ (được nhận lại)` : balance < 0 ? `${formatAmount(balance)} ₫ (cần trả thêm)` : 'Đã cân bằng ✓'}
+                    </p>
+                  </div>
+                );
+              })}
             </div>
           )}
 
           {/* Add expense */}
           {adding ? (
             <div className="space-y-3 p-4 rounded-xl border border-border bg-card">
-              <Input placeholder="Tên chi phí (VD: Ăn trưa)" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} />
-              <Input placeholder="Số tiền (VNĐ)" type="number" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} />
+              <Input
+                placeholder="Tên chi phí (VD: Ăn trưa)"
+                value={form.title}
+                onChange={e => setForm({ ...form, title: e.target.value })}
+              />
+              <Input
+                placeholder="Số tiền (VNĐ)"
+                type="number"
+                value={form.amount}
+                onChange={e => setForm({ ...form, amount: e.target.value })}
+              />
               <Select value={form.category} onValueChange={v => setForm({ ...form, category: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -191,6 +276,62 @@ const SplitBill = ({ tripId, memberNames }: SplitBillProps) => {
                   ))}
                 </SelectContent>
               </Select>
+
+              {/* Payer selection */}
+              {memberIds.length > 1 && (
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">👤 Người trả tiền</label>
+                  <Select value={form.paid_by} onValueChange={v => setForm({ ...form, paid_by: v })}>
+                    <SelectTrigger><SelectValue placeholder="Chọn người trả" /></SelectTrigger>
+                    <SelectContent>
+                      {memberIds.map(uid => (
+                        <SelectItem key={uid} value={uid}>{getName(uid)}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* Split among selection */}
+              {memberIds.length > 1 && (
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-medium text-muted-foreground">👥 Chia cho ai</label>
+                    <button
+                      type="button"
+                      onClick={selectAllMembers}
+                      className="text-xs text-chip-orange hover:underline"
+                    >
+                      Chọn tất cả
+                    </button>
+                  </div>
+                  <div className="space-y-1 max-h-32 overflow-y-auto">
+                    {memberIds.map(uid => (
+                      <label
+                        key={uid}
+                        className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted/50 cursor-pointer text-sm"
+                      >
+                        <Checkbox
+                          checked={form.split_among.includes(uid)}
+                          onCheckedChange={() => toggleSplitMember(uid)}
+                        />
+                        <span className="text-foreground">{getName(uid)}</span>
+                        {form.split_among.includes(uid) && form.amount && (
+                          <span className="ml-auto text-xs text-muted-foreground">
+                            ~{formatAmount(Math.round(parseFloat(form.amount) / form.split_among.length))} ₫
+                          </span>
+                        )}
+                      </label>
+                    ))}
+                  </div>
+                  {form.split_among.length > 0 && form.amount && (
+                    <p className="text-xs text-muted-foreground">
+                      Mỗi người: <span className="font-medium text-foreground">{formatAmount(Math.round(parseFloat(form.amount) / form.split_among.length))} ₫</span>
+                    </p>
+                  )}
+                </div>
+              )}
+
               <div className="flex gap-2">
                 <Button variant="hero" className="flex-1" onClick={addExpense}>Thêm</Button>
                 <Button variant="ghost" onClick={() => setAdding(false)}>Hủy</Button>
@@ -211,9 +352,11 @@ const SplitBill = ({ tripId, memberNames }: SplitBillProps) => {
                   <span className="text-lg">{cat.emoji}</span>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-foreground truncate">{exp.title}</p>
-                    <p className="text-xs text-muted-foreground">{getName(exp.paid_by)} đã trả</p>
+                    <p className="text-xs text-muted-foreground">
+                      {getName(exp.paid_by)} đã trả · chia {exp.split_among.length} người
+                    </p>
                   </div>
-                  <span className="text-sm font-bold text-foreground">{formatAmount(exp.amount)}</span>
+                  <span className="text-sm font-bold text-foreground">{formatAmount(exp.amount)} ₫</span>
                   {exp.paid_by === user?.id && (
                     <button onClick={() => deleteExpense(exp.id)} className="p-1 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive">
                       <Trash2 className="w-3.5 h-3.5" />

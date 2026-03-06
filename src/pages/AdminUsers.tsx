@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Users, Calendar, MapPin, Shield, ArrowLeft, Loader2, TrendingUp,
   Trash2, BarChart3, Plane, Search, Eye, FileText, Clock, Plus, Save, X

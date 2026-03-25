@@ -450,8 +450,8 @@ const Result = () => {
                           return (
                             <div
                               key={idx}
-                              onClick={() => !editMode && handleItemClick(item)}
-                              className={`relative flex gap-4 bg-card rounded-xl p-4 border border-border shadow-card hover:shadow-warm transition-all ml-4 ${editMode ? "" : "cursor-pointer hover:-translate-y-0.5"} group/item ${isCompleted ? "opacity-60" : ""}`}
+                              onClick={() => handleItemClick(item)}
+                              className={`relative flex gap-4 bg-card rounded-xl p-4 border border-border shadow-card hover:shadow-warm transition-all ml-4 cursor-pointer hover:-translate-y-0.5 group/item ${isCompleted ? "opacity-60" : ""}`}
                             >
                               <div className={`absolute -left-[1.6rem] top-5 w-3 h-3 rounded-full border-2 border-background ${isCompleted ? "bg-green-500" : "bg-chip-orange"}`} />
 

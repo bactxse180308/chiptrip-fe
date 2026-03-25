@@ -320,18 +320,6 @@ const Planning = () => {
         />
         <span className="absolute right-5 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">VNĐ</span>
       </div>
-
-      {/* Slider */}
-      <div className="w-full max-w-lg space-y-4">
-        <div className="text-center">
-          <span className="text-3xl font-bold text-gradient">{budgetLabels[budget[0]]}</span>
-          <span className="text-muted-foreground ml-2">/ người</span>
-        </div>
-        <Slider value={budget} onValueChange={handleBudgetSlider} max={7} step={1} className="w-full" />
-        <div className="flex justify-between text-[10px] text-muted-foreground">
-          {budgetLabels.map((l) => (<span key={l}>{l}</span>))}
-        </div>
-      </div>
     </motion.div>,
   ];
 

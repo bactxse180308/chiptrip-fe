@@ -467,12 +467,6 @@ const Result = () => {
                                 {isCompleted && <Check className="w-3.5 h-3.5" />}
                               </button>
 
-                              {editMode && (
-                                <div className="flex flex-col gap-1 flex-shrink-0">
-                                  <button onClick={(e) => { e.stopPropagation(); handleMoveItem(activeDay, idx, "up"); }} disabled={idx === 0} className="w-7 h-7 rounded-lg flex items-center justify-center bg-muted hover:bg-chip-orange/10 text-muted-foreground hover:text-chip-orange disabled:opacity-30 transition-all text-xs">▲</button>
-                                  <button onClick={(e) => { e.stopPropagation(); handleMoveItem(activeDay, idx, "down"); }} disabled={idx === trip.days[activeDay].items.length - 1} className="w-7 h-7 rounded-lg flex items-center justify-center bg-muted hover:bg-chip-orange/10 text-muted-foreground hover:text-chip-orange disabled:opacity-30 transition-all text-xs">▼</button>
-                                </div>
-                              )}
 
                               <img src={item.image && item.image !== "/placeholder.svg" ? item.image : getPlaceImage(item.title, item.bookingType)} alt={item.title} className={`w-16 h-16 rounded-xl object-cover flex-shrink-0 ${isCompleted ? "grayscale" : ""}`} />
                               <div className="flex-1 min-w-0">

@@ -368,7 +368,7 @@ const Planning = () => {
       </div>
 
       {/* Mascot */}
-      {step === 3 && (
+      {step === 2 && (
         <ChipMascot
           storageKey="chip-planning-budget"
           messages={[

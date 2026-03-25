@@ -527,22 +527,22 @@ const Result = () => {
             </>
           ) : (
             <>
-              <Button variant={saved ? "soft" : "hero"} size="sm" onClick={handleSave} disabled={saved} className="gap-1.5">
+              <Button variant={saved ? "soft" : "hero"} size="sm" onClick={handleSave} disabled={saved} className="gap-1.5 flex-shrink-0">
                 {saved ? <Check className="w-4 h-4" /> : <Bookmark className="w-4 h-4" />}
                 {saved ? "Đã lưu" : "Lưu"}
               </Button>
               {dbTripId && (
                 <SplitBill tripId={dbTripId} memberNames={user ? { [user.id]: profile?.display_name || user.email?.split("@")[0] || "Bạn" } : {}} />
               )}
-              <Button variant="soft" size="sm" onClick={handleShare} className="gap-1.5">
+              <Button variant="soft" size="sm" onClick={handleShare} className="gap-1.5 flex-shrink-0">
                 <Share2 className="w-4 h-4" /> Chia sẻ
               </Button>
               <ExportDialog trip={trip} dbTripId={dbTripId}>
-                <Button variant="soft" size="sm" className="gap-1.5">
+                <Button variant="soft" size="sm" className="gap-1.5 flex-shrink-0">
                   <Download className="w-4 h-4" /> Xuất
                 </Button>
               </ExportDialog>
-              <Button variant="soft" size="sm" onClick={handleClone} className="gap-1.5">
+              <Button variant="soft" size="sm" onClick={handleClone} className="gap-1.5 flex-shrink-0">
                 <Copy className="w-4 h-4" /> Clone
               </Button>
             </>

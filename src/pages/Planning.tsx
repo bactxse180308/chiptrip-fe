@@ -88,9 +88,9 @@ const Planning = () => {
   const [branch, setBranch] = useState<Branch>(null);
 
   // Known destination flow state
+  const [knownStep, setKnownStep] = useState(0); // 0: info, 1: styles, 2: budget
   const [origin, setOrigin] = useState("");
   const [destination, setDestination] = useState("");
-  const [tripType, setTripType] = useState<"roundtrip" | "oneway">("roundtrip");
   const [dates, setDates] = useState({ start: "", end: "" });
   const [departureTime, setDepartureTime] = useState("morning");
   const [returnTime, setReturnTime] = useState("afternoon");
@@ -98,7 +98,6 @@ const Planning = () => {
   const [budgetInput, setBudgetInput] = useState("");
   const [styles, setStyles] = useState<string[]>([]);
   const [travelers, setTravelers] = useState(2);
-  const [tickets, setTickets] = useState(1);
   const [originFocused, setOriginFocused] = useState(false);
   const [destFocused, setDestFocused] = useState(false);
   const [isLoading, setIsLoading] = useState(false);

@@ -156,6 +156,17 @@ const Result = () => {
     } catch { toast.error("Clone thất bại"); }
   };
 
+  const toggleCompleted = (dayIdx: number, itemIdx: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const key = `${dayIdx}-${itemIdx}`;
+    setCompletedItems(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
   const handleDeleteItem = (dayIdx: number, itemIdx: number) => {
     setTrip(prev => prev ? ({ ...prev, days: prev.days.map((day, di) => di === dayIdx ? { ...day, items: day.items.filter((_, ii) => ii !== itemIdx) } : day) }) : prev);
     toast.success("Đã xóa hoạt động");

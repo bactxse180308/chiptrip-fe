@@ -119,7 +119,11 @@ const Planning = () => {
   };
 
   const canNext = () => {
-    if (step === 0) return destination.length > 0 && dates.start && dates.end;
+    if (step === 0) {
+      const hasBasic = origin.length > 0 && destination.length > 0 && dates.start;
+      if (tripType === "roundtrip") return hasBasic && dates.end;
+      return hasBasic;
+    }
     if (step === 1) return styles.length > 0;
     if (step === 2) return true;
     return true;

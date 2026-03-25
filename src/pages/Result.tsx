@@ -38,6 +38,8 @@ const Result = () => {
   const [trip, setTrip] = useState<TripPlan | null>(null);
   const [expandedDays, setExpandedDays] = useState<Set<number>>(new Set());
   const [allExpanded, setAllExpanded] = useState(false);
+  const [completedItems, setCompletedItems] = useState<Set<string>>(new Set());
+  const [activeDay, setActiveDay] = useState(0);
 
   // Initialize expanded days - first 3 open by default
   useEffect(() => {

@@ -435,11 +435,7 @@ const Result = () => {
             {saved ? "Đã lưu" : "Lưu"}
           </Button>
           {dbTripId && (
-            <SplitBill tripId={dbTripId} memberNames={user ? { [user.id]: profile?.display_name || user.email?.split("@")[0] || "Bạn" } : {}}>
-              <Button variant="soft" size="sm" className="gap-1.5">
-                <Wallet className="w-4 h-4" /> Chia tiền
-              </Button>
-            </SplitBill>
+            <SplitBill tripId={dbTripId} memberNames={user ? { [user.id]: profile?.display_name || user.email?.split("@")[0] || "Bạn" } : {}} />
           )}
           <Button variant="soft" size="sm" onClick={handleShare} className="gap-1.5">
             <Share2 className="w-4 h-4" /> Chia sẻ

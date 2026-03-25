@@ -111,10 +111,9 @@ const Planning = () => {
   };
 
   const canNext = () => {
-    if (step === 0) return destination.length > 0;
-    if (step === 1) return dates.start && dates.end;
-    if (step === 2) return styles.length > 0;
-    if (step === 3) return true;
+    if (step === 0) return destination.length > 0 && dates.start && dates.end;
+    if (step === 1) return styles.length > 0;
+    if (step === 2) return true;
     return true;
   };
 

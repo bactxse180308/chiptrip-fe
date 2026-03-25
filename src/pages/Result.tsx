@@ -252,7 +252,20 @@ const Result = () => {
     <div className="min-h-screen bg-background pb-24">
       <Navbar />
       <div className="pt-20 pb-12">
-        <div className="container mx-auto px-6">
+        {isSharedView && (
+          <div className="container mx-auto px-6 mb-4">
+            <div className="rounded-2xl bg-chip-yellow-light border border-chip-yellow/30 px-5 py-3 flex items-center gap-3">
+              <span className="text-lg">👀</span>
+              <div className="flex-1">
+                <p className="font-semibold text-foreground text-sm">Bạn đang xem lịch trình được chia sẻ</p>
+                <p className="text-xs text-muted-foreground">Lịch trình này ở chế độ chỉ xem</p>
+              </div>
+              <Button variant="hero" size="sm" onClick={() => handleClone()}>
+                <Copy className="w-3.5 h-3.5" /> Clone về tài khoản
+              </Button>
+            </div>
+          </div>
+        )}
           <div className="grid lg:grid-cols-5 gap-8">
             {/* Left - Map */}
             <div className="lg:col-span-2">

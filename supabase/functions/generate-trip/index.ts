@@ -9,16 +9,31 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { destination, startDate, endDate, budget, styles, travelers } = await req.json();
+    const { destination, startDate, endDate, budget, styles, travelers, departureTime, returnTime } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    const budgetLabels = ["dưới 1 triệu", "1-3 triệu", "3-5 triệu", "5-10 triệu", "trên 10 triệu"];
+    const budgetLabels = ["dưới 500K", "500K-1 triệu", "1-2 triệu", "2-3 triệu", "3-5 triệu", "5-8 triệu", "8-12 triệu", "trên 12 triệu"];
     const styleLabels: Record<string, string> = {
-      healing: "chữa lành, thư giãn",
-      food: "ẩm thực, ăn uống",
-      photo: "chụp ảnh, sống ảo",
-      adventure: "mạo hiểm, khám phá",
+      healing: "nghỉ dưỡng, thư giãn, spa",
+      food: "ẩm thực, food tour, ăn uống local",
+      photo: "check-in sống ảo, điểm chụp đẹp",
+      adventure: "mạo hiểm, khám phá, trekking",
+      resort: "resort, chill, pool party",
+      family: "gia đình, vui chơi trẻ em, an toàn",
+      couple: "couple, hẹn hò, lãng mạn",
+      nightlife: "nightlife, bar, phố đêm",
+      culture: "văn hóa, lịch sử, di tích, bảo tàng",
+      local: "trải nghiệm local, sống như người địa phương",
+      luxury: "sang chảnh, 5 sao, fine dining",
+      group: "bạn bè, nhóm, team building, sôi động",
+    };
+
+    const timeLabels: Record<string, string> = {
+      morning: "sáng sớm (6h-10h)",
+      noon: "buổi trưa (10h-14h)",
+      afternoon: "buổi chiều (14h-18h)",
+      evening: "buổi tối (18h-22h)",
     };
 
     const start = new Date(startDate);
@@ -26,6 +41,8 @@ serve(async (req) => {
     const numDays = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1);
     const budgetText = budgetLabels[budget] || "3-5 triệu";
     const stylesText = styles.map((s: string) => styleLabels[s] || s).join(", ") || "đa dạng";
+    const depTimeText = timeLabels[departureTime] || "sáng sớm";
+    const retTimeText = timeLabels[returnTime] || "buổi chiều";
 
     const systemPrompt = `Bạn là ChipTrip AI - trợ lý du lịch Việt Nam chuyên nghiệp. 
 Tạo lịch trình du lịch chi tiết, thực tế với các địa điểm CÓ THẬT tại Việt Nam.
@@ -35,6 +52,12 @@ Trả về JSON thuần túy, KHÔNG markdown, KHÔNG backtick.`;
     const userPrompt = `Tạo lịch trình du lịch ${destination} cho ${travelers} người, ${numDays} ngày (từ ${startDate} đến ${endDate}).
 Ngân sách: ${budgetText} VNĐ/người.
 Phong cách: ${stylesText}.
+Thời gian khởi hành: ${depTimeText}.
+Thời gian về: ${retTimeText}.
+
+QUAN TRỌNG VỀ THỜI GIAN:
+- Ngày đầu tiên: bắt đầu từ ${depTimeText}, KHÔNG lên lịch hoạt động trước khung giờ khởi hành
+- Ngày cuối cùng: kết thúc trước ${retTimeText}, cần có hoạt động di chuyển về trong khung giờ này
 
 Trả về JSON đúng format sau (KHÔNG có markdown, KHÔNG có backtick):
 {
@@ -122,7 +145,6 @@ Yêu cầu:
       });
     }
 
-    // Parse JSON from AI response, strip markdown if present
     let tripData;
     try {
       let cleaned = content.trim();
@@ -137,7 +159,6 @@ Yêu cầu:
       });
     }
 
-    // Ensure required fields
     tripData.id = crypto.randomUUID();
     tripData.image = "";
     if (!tripData.destination) tripData.destination = destination;

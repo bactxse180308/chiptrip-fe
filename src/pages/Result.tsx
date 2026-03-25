@@ -1,8 +1,8 @@
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MapPin, Clock, Wallet, Star, Bookmark, Share2, Check, Download, ExternalLink, Hotel, UtensilsCrossed, Ticket, Coffee, Copy, Trash2, GripVertical, RefreshCw, Loader2 } from "lucide-react";
+import { MapPin, Clock, Wallet, Star, Bookmark, Share2, Check, Download, ExternalLink, Hotel, UtensilsCrossed, Ticket, Coffee, Copy, Trash2, GripVertical, RefreshCw, Loader2, ChevronDown, ChevronUp, ArrowUp, ArrowDown } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import Navbar from "@/components/Navbar";
@@ -16,6 +16,7 @@ import GroupPanel from "@/components/GroupPanel";
 import SplitBill from "@/components/SplitBill";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import ChipMascot from "@/components/ChipMascot";
 
 const bookingIcons: Record<string, React.ElementType> = {
   hotel: Hotel, restaurant: UtensilsCrossed, attraction: Ticket, cafe: Coffee, transport: MapPin,
@@ -34,31 +35,57 @@ const Result = () => {
   const [swapModal, setSwapModal] = useState<{ open: boolean; item: TripItem | null; dayIdx: number; itemIdx: number }>({ open: false, item: null, dayIdx: 0, itemIdx: 0 });
   const [loadingTrip, setLoadingTrip] = useState(false);
   const [dbTripId, setDbTripId] = useState<string | null>(null);
-
   const [trip, setTrip] = useState<TripPlan | null>(null);
+  const [expandedDays, setExpandedDays] = useState<Set<number>>(new Set());
+  const [allExpanded, setAllExpanded] = useState(false);
 
-  // Load trip from URL param ?id=xxx or from navigation state
+  // Initialize expanded days - first 3 open by default
+  useEffect(() => {
+    if (trip) {
+      const initial = new Set<number>();
+      const limit = Math.min(3, trip.days.length);
+      for (let i = 0; i < limit; i++) initial.add(i);
+      setExpandedDays(initial);
+      setAllExpanded(trip.days.length <= 3);
+    }
+  }, [trip]);
+
+  const toggleDay = (idx: number) => {
+    setExpandedDays(prev => {
+      const next = new Set(prev);
+      if (next.has(idx)) next.delete(idx);
+      else next.add(idx);
+      return next;
+    });
+  };
+
+  const toggleAllDays = () => {
+    if (allExpanded) {
+      const initial = new Set<number>();
+      for (let i = 0; i < Math.min(3, (trip?.days.length || 0)); i++) initial.add(i);
+      setExpandedDays(initial);
+    } else {
+      const all = new Set<number>();
+      trip?.days.forEach((_, i) => all.add(i));
+      setExpandedDays(all);
+    }
+    setAllExpanded(!allExpanded);
+  };
+
   useEffect(() => {
     const tripId = searchParams.get("id") || searchParams.get("shared");
     if (tripId) {
-      // Always load from DB when URL has id param
       setLoadingTrip(true);
       setDbTripId(tripId);
-      supabase
-        .from("trips")
-        .select("id, trip_data")
-        .eq("id", tripId)
-        .maybeSingle()
-        .then(({ data, error }) => {
-          if (data?.trip_data) {
-            setTrip(data.trip_data as unknown as TripPlan);
-            setSaved(true);
-          } else {
-            // Fallback to state or default
-            setTrip(state?.trip || generateTrip("Đà Nẵng", "2026-03-15", "2026-03-17", 3, []));
-          }
-          setLoadingTrip(false);
-        });
+      supabase.from("trips").select("id, trip_data").eq("id", tripId).maybeSingle().then(({ data }) => {
+        if (data?.trip_data) {
+          setTrip(data.trip_data as unknown as TripPlan);
+          setSaved(true);
+        } else {
+          setTrip(state?.trip || generateTrip("Đà Nẵng", "2026-03-15", "2026-03-17", 3, []));
+        }
+        setLoadingTrip(false);
+      });
     } else if (state?.trip) {
       setTrip(state.trip as TripPlan);
     } else {
@@ -67,8 +94,7 @@ const Result = () => {
   }, []);
 
   const packingItems = trip ? generatePackingList(
-    trip.destination,
-    trip.days.length,
+    trip.destination, trip.days.length,
     trip.tags.map(t => {
       const map: Record<string, string> = { "Chữa lành": "healing", "Ẩm thực": "food", "Sống ảo": "photo", "Mạo hiểm": "adventure" };
       return map[t] || "";
@@ -82,92 +108,60 @@ const Result = () => {
   const mapSrc = `https://www.google.com/maps/embed/v1/search?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q=${encodeURIComponent(mapQuery)}&zoom=12`;
 
   const handleSave = async () => {
-    if (!user) {
-      toast.error("Vui lòng đăng nhập để lưu lịch trình");
-      navigate("/auth", { state: { from: "/result" } });
-      return;
-    }
-
+    if (!user) { toast.error("Vui lòng đăng nhập để lưu lịch trình"); navigate("/auth", { state: { from: "/result" } }); return; }
     try {
       const { data, error } = await supabase.from("trips").insert({
-        user_id: user.id,
-        destination: trip.destination,
-        start_date: trip.days[0]?.date || null,
-        end_date: trip.days[trip.days.length - 1]?.date || null,
+        user_id: user.id, destination: trip!.destination,
+        start_date: trip!.days[0]?.date || null, end_date: trip!.days[trip!.days.length - 1]?.date || null,
         trip_data: trip as any,
       }).select("id").single();
       if (error) throw error;
       setSaved(true);
-      if (data) {
-        setDbTripId(data.id);
-        // Update URL to include trip ID without navigation
-        window.history.replaceState(null, "", `/result?id=${data.id}`);
-      }
+      if (data) { setDbTripId(data.id); window.history.replaceState(null, "", `/result?id=${data.id}`); }
       toast.success("Đã lưu kế hoạch!", {
         description: "Xem lại trong \"Chuyến đi của tôi\"",
         action: { label: "Xem ngay", onClick: () => navigate("/saved") },
       });
-    } catch (error: any) {
-      toast.error("Lưu thất bại: " + (error.message || "Có lỗi xảy ra"));
-    }
+    } catch (error: any) { toast.error("Lưu thất bại: " + (error.message || "Có lỗi xảy ra")); }
   };
 
   const handleShare = async () => {
-    if (!dbTripId) {
-      toast.error("Vui lòng lưu lịch trình trước khi chia sẻ");
-      return;
-    }
+    if (!dbTripId) { toast.error("Vui lòng lưu lịch trình trước khi chia sẻ"); return; }
     const shareUrl = `${window.location.origin}/result?id=${dbTripId}`;
-    const shareData = { title: trip.title, text: `Xem lịch trình ${trip.title} trên Chip Trip! 🐥`, url: shareUrl };
+    const shareData = { title: trip!.title, text: `Xem lịch trình ${trip!.title} trên Chip Trip! 🐥`, url: shareUrl };
     try {
-      if (navigator.share) { await navigator.share(shareData); }
+      if (navigator.share) await navigator.share(shareData);
       else { await navigator.clipboard.writeText(`${shareData.text}\n${shareData.url}`); toast.success("Đã sao chép link!"); }
     } catch { /* cancelled */ }
   };
 
-  const handleItemClick = (item: TripItem) => {
-    navigate("/location", { state: { item } });
-  };
-
+  const handleItemClick = (item: TripItem) => { navigate("/location", { state: { item } }); };
   const handleBooking = (e: React.MouseEvent, item: TripItem) => {
     e.stopPropagation();
-    if (item.bookingUrl) { window.open(item.bookingUrl, "_blank"); }
-    else { window.open(`https://www.google.com/search?q=${encodeURIComponent(item.title + " " + (item.address || trip.destination))}`, "_blank"); }
+    if (item.bookingUrl) window.open(item.bookingUrl, "_blank");
+    else window.open(`https://www.google.com/search?q=${encodeURIComponent(item.title + " " + (item.address || trip!.destination))}`, "_blank");
   };
 
   const handleClone = async () => {
-    if (!user) {
-      toast.error("Vui lòng đăng nhập để clone lịch trình");
-      return;
-    }
-    const cloned: TripPlan = { ...trip, id: Date.now().toString(), title: trip.title + " (bản sao)" };
+    if (!user) { toast.error("Vui lòng đăng nhập để clone lịch trình"); return; }
+    const cloned: TripPlan = { ...trip!, id: Date.now().toString(), title: trip!.title + " (bản sao)" };
     try {
-      await supabase.from("trips").insert({
-        user_id: user.id,
-        destination: cloned.destination,
-        trip_data: cloned as any,
-      });
+      await supabase.from("trips").insert({ user_id: user.id, destination: cloned.destination, trip_data: cloned as any });
       toast.success("Đã clone lịch trình!", {
         description: "Bản sao đã được lưu vào \"Chuyến đi của tôi\"",
         action: { label: "Xem ngay", onClick: () => navigate("/saved") },
       });
-    } catch {
-      toast.error("Clone thất bại");
-    }
+    } catch { toast.error("Clone thất bại"); }
   };
 
   const handleDeleteItem = (dayIdx: number, itemIdx: number) => {
-    setTrip(prev => ({
-      ...prev,
-      days: prev.days.map((day, di) =>
-        di === dayIdx ? { ...day, items: day.items.filter((_, ii) => ii !== itemIdx) } : day
-      ),
-    }));
+    setTrip(prev => prev ? ({ ...prev, days: prev.days.map((day, di) => di === dayIdx ? { ...day, items: day.items.filter((_, ii) => ii !== itemIdx) } : day) }) : prev);
     toast.success("Đã xóa hoạt động");
   };
 
   const handleMoveItem = (dayIdx: number, itemIdx: number, direction: "up" | "down") => {
     setTrip(prev => {
+      if (!prev) return prev;
       const newDays = [...prev.days];
       const items = [...newDays[dayIdx].items];
       const targetIdx = direction === "up" ? itemIdx - 1 : itemIdx + 1;
@@ -180,14 +174,12 @@ const Result = () => {
 
   const handleSwapItem = (newItem: TripItem) => {
     const { dayIdx, itemIdx } = swapModal;
-    setTrip(prev => ({
+    setTrip(prev => prev ? ({
       ...prev,
       days: prev.days.map((day, di) =>
-        di === dayIdx
-          ? { ...day, items: day.items.map((item, ii) => ii === itemIdx ? { ...newItem, id: item.id, time: item.time, image: item.image } : item) }
-          : day
+        di === dayIdx ? { ...day, items: day.items.map((item, ii) => ii === itemIdx ? { ...newItem, id: item.id, time: item.time, image: item.image } : item) } : day
       ),
-    }));
+    }) : prev);
     toast.success("Đã đổi hoạt động!");
   };
 
@@ -204,7 +196,7 @@ const Result = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-24">
       <Navbar />
       <div className="pt-20 pb-12">
         <div className="container mx-auto px-6">
@@ -221,10 +213,10 @@ const Result = () => {
                     <Wallet className="w-4 h-4 text-chip-orange" /> Dự toán chi phí
                   </h3>
                   <div className="space-y-2">
-                {trip.days.map(day => {
+                    {trip.days.map(day => {
                       const dayCost = day.items.reduce((sum, item) => {
                         const costStr = item.cost.toLowerCase().replace(/[^0-9.km]/g, "");
-                        if (!costStr || costStr === "") return sum;
+                        if (!costStr) return sum;
                         const numMatch = costStr.match(/([0-9.]+)/);
                         if (!numMatch) return sum;
                         const num = parseFloat(numMatch[1]);
@@ -275,11 +267,7 @@ const Result = () => {
                   </div>
                 </div>
 
-                {/* Weather Widget */}
-                <WeatherWidget
-                  destination={trip.destination}
-                  dates={trip.days.map(d => d.date).filter(Boolean)}
-                />
+                <WeatherWidget destination={trip.destination} dates={trip.days.map(d => d.date).filter(Boolean)} />
               </div>
             </div>
 
@@ -295,19 +283,13 @@ const Result = () => {
                       <span className="flex items-center gap-1"><Star className="w-4 h-4 text-chip-yellow" /> {trip.rating}</span>
                     </div>
                   </div>
+                  {/* Minimal header actions - main actions in floating bar */}
                   <div className="flex gap-2 flex-wrap">
-                    <Button variant="soft" size="sm" onClick={handleShare}><Share2 className="w-4 h-4" /></Button>
-                    <ExportDialog trip={trip} dbTripId={dbTripId}><Button variant="soft" size="sm"><Download className="w-4 h-4" /></Button></ExportDialog>
-                    <Button variant="soft" size="sm" onClick={handleClone}><Copy className="w-4 h-4" /> Clone</Button>
                     {dbTripId && <GroupPanel tripId={dbTripId} isOwner={true} />}
                     {dbTripId && <SplitBill tripId={dbTripId} memberNames={user ? { [user.id]: profile?.display_name || user.email?.split("@")[0] || "Bạn" } : {}} />}
                     <Button variant={editMode ? "hero" : "soft"} size="sm" onClick={() => setEditMode(!editMode)}>
                       {editMode ? <Check className="w-4 h-4" /> : <GripVertical className="w-4 h-4" />}
                       {editMode ? "Xong" : "Sửa"}
-                    </Button>
-                    <Button variant={saved ? "soft" : "hero"} size="sm" onClick={handleSave} disabled={saved}>
-                      {saved ? <Check className="w-4 h-4" /> : <Bookmark className="w-4 h-4" />}
-                      {saved ? "Đã lưu" : "Lưu"}
                     </Button>
                   </div>
                 </div>
@@ -319,79 +301,101 @@ const Result = () => {
                   <TabsTrigger value="packing">🎒 Chuẩn bị đồ</TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="itinerary" className="space-y-6 mt-4">
-                  {trip.days.map((day, dayIdx) => (
-                    <motion.div key={day.day} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: dayIdx * 0.15 }} className="space-y-3">
-                      <div className="flex items-center gap-3">
-                        <div className="px-4 py-1.5 rounded-full bg-gradient-accent">
-                          <span className="text-sm font-bold text-accent-foreground">{day.day}</span>
-                        </div>
-                        <span className="text-sm text-muted-foreground">{day.date}</span>
-                      </div>
+                <TabsContent value="itinerary" className="space-y-4 mt-4">
+                  {/* Expand/Collapse all toggle */}
+                  {trip.days.length > 3 && (
+                    <div className="flex justify-end">
+                      <button onClick={toggleAllDays} className="text-xs font-medium text-chip-orange hover:underline flex items-center gap-1">
+                        {allExpanded ? <><ChevronUp className="w-3 h-3" /> Thu gọn</> : <><ChevronDown className="w-3 h-3" /> Xem tất cả</>}
+                      </button>
+                    </div>
+                  )}
 
-                      <div className="space-y-3 pl-4 border-l-2 border-chip-orange/20 ml-4">
-                        {day.items.map((item, idx) => {
-                          const BookingIcon = bookingIcons[item.bookingType || "attraction"] || Ticket;
-                          const bookingLabel = bookingLabels[item.bookingType || "attraction"] || "Xem thêm";
+                  {trip.days.map((day, dayIdx) => {
+                    const isExpanded = expandedDays.has(dayIdx);
+                    return (
+                      <motion.div key={day.day} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: dayIdx * 0.1 }} className="space-y-3">
+                        {/* Day header - clickable to toggle */}
+                        <button onClick={() => toggleDay(dayIdx)} className="flex items-center gap-3 w-full group">
+                          <div className="px-4 py-1.5 rounded-full bg-gradient-accent">
+                            <span className="text-sm font-bold text-accent-foreground">{day.day}</span>
+                          </div>
+                          <span className="text-sm text-muted-foreground flex-1 text-left">{day.date}</span>
+                          <span className="text-xs text-muted-foreground">{day.items.length} hoạt động</span>
+                          {isExpanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+                        </button>
 
-                          return (
-                            <div
-                              key={idx}
-                              onClick={() => !editMode && handleItemClick(item)}
-                              className={`relative flex gap-4 bg-card rounded-xl p-4 border border-border shadow-card hover:shadow-warm transition-all ml-4 ${editMode ? "" : "cursor-pointer hover:-translate-y-0.5"} group`}
+                        {/* Collapsible items */}
+                        <AnimatePresence>
+                          {isExpanded && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: "auto", opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.3 }}
+                              className="overflow-hidden"
                             >
-                              <div className="absolute -left-[1.6rem] top-5 w-3 h-3 rounded-full bg-chip-orange border-2 border-background" />
+                              <div className="space-y-3 pl-4 border-l-2 border-chip-orange/20 ml-4">
+                                {day.items.map((item, idx) => {
+                                  const BookingIcon = bookingIcons[item.bookingType || "attraction"] || Ticket;
+                                  const bookingLabel = bookingLabels[item.bookingType || "attraction"] || "Xem thêm";
 
-                              {editMode && (
-                                <div className="flex flex-col gap-1 flex-shrink-0">
-                                  <button onClick={(e) => { e.stopPropagation(); handleMoveItem(dayIdx, idx, "up"); }} disabled={idx === 0} className="w-7 h-7 rounded-lg flex items-center justify-center bg-muted hover:bg-chip-orange/10 text-muted-foreground hover:text-chip-orange disabled:opacity-30 transition-all text-xs">▲</button>
-                                  <button onClick={(e) => { e.stopPropagation(); handleMoveItem(dayIdx, idx, "down"); }} disabled={idx === day.items.length - 1} className="w-7 h-7 rounded-lg flex items-center justify-center bg-muted hover:bg-chip-orange/10 text-muted-foreground hover:text-chip-orange disabled:opacity-30 transition-all text-xs">▼</button>
-                                </div>
-                              )}
-
-                              <img src={item.image && item.image !== "/placeholder.svg" ? item.image : getPlaceImage(item.title, item.bookingType)} alt={item.title} className="w-16 h-16 rounded-xl object-cover flex-shrink-0" />
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-xs font-semibold text-chip-orange">{item.time}</span>
-                                </div>
-                                <h4 className="font-semibold text-foreground truncate">{item.title}</h4>
-                                <p className="text-sm text-muted-foreground">{item.desc}</p>
-                                {!editMode && (
-                                  <div className="flex items-center gap-2 mt-2">
-                                    <button onClick={(e) => handleBooking(e, item)} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-chip-yellow-light hover:bg-chip-orange/10 border border-chip-yellow/30 text-xs font-semibold text-chip-orange transition-all hover:shadow-warm">
-                                      <BookingIcon className="w-3 h-3" /> {bookingLabel} <ExternalLink className="w-3 h-3" />
-                                    </button>
-                                    <button
-                                      onClick={(e) => { e.stopPropagation(); setSwapModal({ open: true, item, dayIdx, itemIdx: idx }); }}
-                                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-muted hover:bg-chip-orange/10 border border-border text-xs font-medium text-muted-foreground hover:text-chip-orange transition-all"
+                                  return (
+                                    <div
+                                      key={idx}
+                                      onClick={() => !editMode && handleItemClick(item)}
+                                      className={`relative flex gap-4 bg-card rounded-xl p-4 border border-border shadow-card hover:shadow-warm transition-all ml-4 ${editMode ? "" : "cursor-pointer hover:-translate-y-0.5"} group/item`}
                                     >
-                                      <RefreshCw className="w-3 h-3" /> Đổi
-                                    </button>
-                                  </div>
-                                )}
-                                {editMode && (
-                                  <button
-                                    onClick={(e) => { e.stopPropagation(); setSwapModal({ open: true, item, dayIdx, itemIdx: idx }); }}
-                                    className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-chip-yellow-light hover:bg-chip-orange/10 border border-chip-yellow/30 text-xs font-semibold text-chip-orange transition-all hover:shadow-warm"
-                                  >
-                                    <RefreshCw className="w-3 h-3" /> Đổi gợi ý khác
-                                  </button>
-                                )}
+                                      <div className="absolute -left-[1.6rem] top-5 w-3 h-3 rounded-full bg-chip-orange border-2 border-background" />
+
+                                      {editMode && (
+                                        <div className="flex flex-col gap-1 flex-shrink-0">
+                                          <button onClick={(e) => { e.stopPropagation(); handleMoveItem(dayIdx, idx, "up"); }} disabled={idx === 0} className="w-7 h-7 rounded-lg flex items-center justify-center bg-muted hover:bg-chip-orange/10 text-muted-foreground hover:text-chip-orange disabled:opacity-30 transition-all text-xs">▲</button>
+                                          <button onClick={(e) => { e.stopPropagation(); handleMoveItem(dayIdx, idx, "down"); }} disabled={idx === day.items.length - 1} className="w-7 h-7 rounded-lg flex items-center justify-center bg-muted hover:bg-chip-orange/10 text-muted-foreground hover:text-chip-orange disabled:opacity-30 transition-all text-xs">▼</button>
+                                        </div>
+                                      )}
+
+                                      <img src={item.image && item.image !== "/placeholder.svg" ? item.image : getPlaceImage(item.title, item.bookingType)} alt={item.title} className="w-16 h-16 rounded-xl object-cover flex-shrink-0" />
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-xs font-semibold text-chip-orange">{item.time}</span>
+                                        </div>
+                                        <h4 className="font-semibold text-foreground truncate">{item.title}</h4>
+                                        <p className="text-sm text-muted-foreground">{item.desc}</p>
+                                        {/* Hover actions - always visible on hover, no edit mode needed */}
+                                        <div className="flex items-center gap-2 mt-2">
+                                          <button onClick={(e) => handleBooking(e, item)} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-chip-yellow-light hover:bg-chip-orange/10 border border-chip-yellow/30 text-xs font-semibold text-chip-orange transition-all hover:shadow-warm">
+                                            <BookingIcon className="w-3 h-3" /> {bookingLabel} <ExternalLink className="w-3 h-3" />
+                                          </button>
+                                          <div className="hidden group-hover/item:flex items-center gap-1">
+                                            <button onClick={(e) => { e.stopPropagation(); setSwapModal({ open: true, item, dayIdx, itemIdx: idx }); }} className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-muted hover:bg-chip-orange/10 border border-border text-xs font-medium text-muted-foreground hover:text-chip-orange transition-all" title="Đổi">
+                                              <RefreshCw className="w-3 h-3" />
+                                            </button>
+                                            <button onClick={(e) => { e.stopPropagation(); handleDeleteItem(dayIdx, idx); }} className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-muted hover:bg-destructive/10 border border-border text-xs font-medium text-muted-foreground hover:text-destructive transition-all" title="Xóa">
+                                              <Trash2 className="w-3 h-3" />
+                                            </button>
+                                            <button onClick={(e) => { e.stopPropagation(); handleMoveItem(dayIdx, idx, "up"); }} disabled={idx === 0} className="inline-flex items-center px-1.5 py-1 rounded-lg bg-muted hover:bg-chip-orange/10 border border-border text-xs text-muted-foreground hover:text-chip-orange disabled:opacity-30 transition-all" title="Lên">
+                                              <ArrowUp className="w-3 h-3" />
+                                            </button>
+                                            <button onClick={(e) => { e.stopPropagation(); handleMoveItem(dayIdx, idx, "down"); }} disabled={idx === day.items.length - 1} className="inline-flex items-center px-1.5 py-1 rounded-lg bg-muted hover:bg-chip-orange/10 border border-border text-xs text-muted-foreground hover:text-chip-orange disabled:opacity-30 transition-all" title="Xuống">
+                                              <ArrowDown className="w-3 h-3" />
+                                            </button>
+                                          </div>
+                                        </div>
+                                      </div>
+                                      <div className="text-right flex-shrink-0">
+                                        <span className="text-sm font-bold text-foreground">{item.cost}</span>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
                               </div>
-                              <div className="text-right flex-shrink-0 flex flex-col items-end gap-2">
-                                <span className="text-sm font-bold text-foreground">{item.cost}</span>
-                                {editMode && (
-                                  <button onClick={(e) => { e.stopPropagation(); handleDeleteItem(dayIdx, idx); }} className="w-7 h-7 rounded-lg flex items-center justify-center bg-destructive/10 hover:bg-destructive/20 text-destructive transition-all">
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </motion.div>
-                  ))}
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </motion.div>
+                    );
+                  })}
                 </TabsContent>
 
                 <TabsContent value="packing" className="mt-4">
@@ -402,6 +406,36 @@ const Result = () => {
           </div>
         </div>
       </div>
+
+      {/* Floating Action Bar */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-card/80 backdrop-blur-lg border-t border-border">
+        <div className="container mx-auto px-6 py-3 flex items-center justify-center gap-3">
+          <Button variant={saved ? "soft" : "hero"} size="sm" onClick={handleSave} disabled={saved} className="gap-1.5">
+            {saved ? <Check className="w-4 h-4" /> : <Bookmark className="w-4 h-4" />}
+            {saved ? "Đã lưu" : "Lưu"}
+          </Button>
+          <Button variant="soft" size="sm" onClick={handleShare} className="gap-1.5">
+            <Share2 className="w-4 h-4" /> Chia sẻ
+          </Button>
+          <ExportDialog trip={trip} dbTripId={dbTripId}>
+            <Button variant="soft" size="sm" className="gap-1.5">
+              <Download className="w-4 h-4" /> Xuất
+            </Button>
+          </ExportDialog>
+          <Button variant="soft" size="sm" onClick={handleClone} className="gap-1.5">
+            <Copy className="w-4 h-4" /> Clone
+          </Button>
+        </div>
+      </div>
+
+      {/* Mascot */}
+      <ChipMascot
+        storageKey="chip-result-welcome"
+        messages={[
+          { text: "Lịch trình xịn quá! Lưu lại để không mất nha 🐤", delay: 1500 },
+          { text: "Thêm bạn bè vào nhóm để chia tiền dễ hơn!", delay: 10000 },
+        ]}
+      />
 
       <SuggestAlternativeModal
         open={swapModal.open}

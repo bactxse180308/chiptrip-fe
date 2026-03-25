@@ -182,15 +182,15 @@ const Planning = () => {
         body: {
           origin,
           destination,
-          tripType,
+          tripType: "roundtrip",
           startDate: dates.start,
-          endDate: tripType === "roundtrip" ? dates.end : dates.start,
+          endDate: dates.end,
           departureTime,
-          returnTime: tripType === "roundtrip" ? returnTime : undefined,
+          returnTime,
           budget: budget[0],
           styles,
           travelers,
-          tickets,
+          tickets: travelers,
         },
       });
 
@@ -212,8 +212,10 @@ const Planning = () => {
     }
   };
 
-  const canGenerate = () => {
-    return destination.length > 0 && dates.start && styles.length > 0;
+  const canNextKnown = () => {
+    if (knownStep === 0) return origin.length > 0 && destination.length > 0 && dates.start && dates.end;
+    if (knownStep === 1) return styles.length > 0;
+    return true;
   };
 
   // ==================== RENDER ====================

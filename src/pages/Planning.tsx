@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Slider } from "@/components/ui/slider";
 import { Search, CalendarDays, ArrowRight, ArrowLeft, Sparkles, Loader2, Check } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { useAuth } from "@/hooks/useAuth";
@@ -319,18 +318,6 @@ const Planning = () => {
           className="w-full h-14 px-5 pr-16 rounded-2xl border-2 border-border bg-card text-foreground text-lg font-medium placeholder:text-muted-foreground focus:outline-none focus:border-chip-orange focus:ring-4 focus:ring-chip-orange/10 transition-all text-center"
         />
         <span className="absolute right-5 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">VNĐ</span>
-      </div>
-
-      {/* Slider */}
-      <div className="w-full max-w-lg space-y-4">
-        <div className="text-center">
-          <span className="text-3xl font-bold text-gradient">{budgetLabels[budget[0]]}</span>
-          <span className="text-muted-foreground ml-2">/ người</span>
-        </div>
-        <Slider value={budget} onValueChange={handleBudgetSlider} max={7} step={1} className="w-full" />
-        <div className="flex justify-between text-[10px] text-muted-foreground">
-          {budgetLabels.map((l) => (<span key={l}>{l}</span>))}
-        </div>
       </div>
     </motion.div>,
   ];

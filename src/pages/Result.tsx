@@ -42,6 +42,7 @@ const Result = () => {
   const [activeDay, setActiveDay] = useState(0);
   const dayTabsRef = useRef<HTMLDivElement>(null);
   const dayButtonRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const [isSharedView, setIsSharedView] = useState(false);
 
   const handleDayClick = useCallback((dayIdx: number) => {
     setActiveDay(dayIdx);

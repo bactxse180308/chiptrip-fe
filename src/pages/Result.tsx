@@ -31,7 +31,7 @@ const Result = () => {
   const [searchParams] = useSearchParams();
   const { user, profile } = useAuth();
   const [saved, setSaved] = useState(false);
-  const [editMode, setEditMode] = useState(false);
+  const [editMode] = useState(false);
   const [swapModal, setSwapModal] = useState<{ open: boolean; item: TripItem | null; dayIdx: number; itemIdx: number }>({ open: false, item: null, dayIdx: 0, itemIdx: 0 });
   const [loadingTrip, setLoadingTrip] = useState(false);
   const [dbTripId, setDbTripId] = useState<string | null>(null);

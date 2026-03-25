@@ -324,10 +324,10 @@ const Planning = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="pt-20 pb-12 px-6">
-        {/* Progress bar - 4 steps */}
+        {/* Progress bar - 3 steps */}
         <div className="container mx-auto max-w-lg mb-8">
           <div className="flex gap-2">
-            {[0, 1, 2, 3].map((i) => (
+            {[0, 1, 2].map((i) => (
               <div key={i} className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${i <= step ? "bg-chip-orange" : "bg-border"}`} />
             ))}
           </div>

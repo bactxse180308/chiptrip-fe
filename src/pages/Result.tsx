@@ -157,11 +157,23 @@ const Result = () => {
 
   const handleShare = async () => {
     if (!dbTripId) { toast.error("Vui lòng lưu lịch trình trước khi chia sẻ"); return; }
-    const shareUrl = `${window.location.origin}/result?id=${dbTripId}`;
+    
+    // Generate share token if not exists
+    const token = crypto.randomUUID().replace(/-/g, "").slice(0, 12);
+    const { data: existing } = await supabase.from("trips").select("share_token").eq("id", dbTripId).maybeSingle();
+    
+    let shareToken = (existing as any)?.share_token;
+    if (!shareToken) {
+      const { error } = await supabase.from("trips").update({ share_token: token } as any).eq("id", dbTripId);
+      if (error) { toast.error("Không thể tạo link chia sẻ"); return; }
+      shareToken = token;
+    }
+    
+    const shareUrl = `${window.location.origin}/result?shared=${shareToken}`;
     const shareData = { title: trip!.title, text: `Xem lịch trình ${trip!.title} trên Chip Trip! 🐥`, url: shareUrl };
     try {
       if (navigator.share) await navigator.share(shareData);
-      else { await navigator.clipboard.writeText(`${shareData.text}\n${shareData.url}`); toast.success("Đã sao chép link!"); }
+      else { await navigator.clipboard.writeText(`${shareData.text}\n${shareData.url}`); toast.success("Đã sao chép link chia sẻ!"); }
     } catch { /* cancelled */ }
   };
 

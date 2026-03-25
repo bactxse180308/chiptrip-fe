@@ -548,6 +548,16 @@ const Planning = () => {
       <Navbar />
       <div className="pt-20 pb-12 px-6">
         <div className="container mx-auto max-w-3xl">
+          {/* Progress bar for known flow */}
+          {branch === "known" && !isLoading && (
+            <div className="max-w-lg mx-auto mb-6">
+              <div className="flex gap-2">
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${i <= knownStep ? "bg-chip-orange" : "bg-border"}`} />
+                ))}
+              </div>
+            </div>
+          )}
           <AnimatePresence mode="wait">
             {isLoading ? (
               <motion.div key="loading" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center justify-center min-h-[60vh] gap-6">

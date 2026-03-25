@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Search, CalendarDays, ArrowRight, ArrowLeft, Sparkles, Loader2, Check } from "lucide-react";
+import { Search, CalendarDays, ArrowRight, ArrowLeft, Sparkles, Loader2, Check, ArrowLeftRight, MapPin } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";

@@ -157,7 +157,10 @@ const Planning = () => {
   ];
 
   const allPlaces = regions.flatMap(r => r.places);
-  const filteredSuggestions = destination.length > 0
+  const filteredOriginSuggestions = originFocused && origin.length > 0
+    ? allPlaces.filter(p => p.name.toLowerCase().includes(origin.toLowerCase()) && p.name.toLowerCase() !== origin.toLowerCase())
+    : [];
+  const filteredDestSuggestions = destFocused && destination.length > 0
     ? allPlaces.filter(p => p.name.toLowerCase().includes(destination.toLowerCase()) && p.name.toLowerCase() !== destination.toLowerCase())
     : [];
 

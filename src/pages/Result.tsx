@@ -315,100 +315,107 @@ const Result = () => {
                 </TabsList>
 
                 <TabsContent value="itinerary" className="space-y-4 mt-4">
-                  {/* Expand/Collapse all toggle */}
-                  {trip.days.length > 3 && (
-                    <div className="flex justify-end">
-                      <button onClick={toggleAllDays} className="text-xs font-medium text-chip-orange hover:underline flex items-center gap-1">
-                        {allExpanded ? <><ChevronUp className="w-3 h-3" /> Thu gọn</> : <><ChevronDown className="w-3 h-3" /> Xem tất cả</>}
-                      </button>
-                    </div>
-                  )}
-
-                  {trip.days.map((day, dayIdx) => {
-                    const isExpanded = expandedDays.has(dayIdx);
-                    return (
-                      <motion.div key={day.day} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: dayIdx * 0.1 }} className="space-y-3">
-                        {/* Day header - clickable to toggle */}
-                        <button onClick={() => toggleDay(dayIdx)} className="flex items-center gap-3 w-full group">
-                          <div className="px-4 py-1.5 rounded-full bg-gradient-accent">
-                            <span className="text-sm font-bold text-accent-foreground">{day.day}</span>
-                          </div>
-                          <span className="text-sm text-muted-foreground flex-1 text-left">{day.date}</span>
-                          <span className="text-xs text-muted-foreground">{day.items.length} hoạt động</span>
-                          {isExpanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
-                        </button>
-
-                        {/* Collapsible items */}
-                        <AnimatePresence>
-                          {isExpanded && (
-                            <motion.div
-                              initial={{ height: 0, opacity: 0 }}
-                              animate={{ height: "auto", opacity: 1 }}
-                              exit={{ height: 0, opacity: 0 }}
-                              transition={{ duration: 0.3 }}
-                              className="overflow-hidden"
-                            >
-                              <div className="space-y-3 pl-4 border-l-2 border-chip-orange/20 ml-4">
-                                {day.items.map((item, idx) => {
-                                  const BookingIcon = bookingIcons[item.bookingType || "attraction"] || Ticket;
-                                  const bookingLabel = bookingLabels[item.bookingType || "attraction"] || "Xem thêm";
-
-                                  return (
-                                    <div
-                                      key={idx}
-                                      onClick={() => !editMode && handleItemClick(item)}
-                                      className={`relative flex gap-4 bg-card rounded-xl p-4 border border-border shadow-card hover:shadow-warm transition-all ml-4 ${editMode ? "" : "cursor-pointer hover:-translate-y-0.5"} group/item`}
-                                    >
-                                      <div className="absolute -left-[1.6rem] top-5 w-3 h-3 rounded-full bg-chip-orange border-2 border-background" />
-
-                                      {editMode && (
-                                        <div className="flex flex-col gap-1 flex-shrink-0">
-                                          <button onClick={(e) => { e.stopPropagation(); handleMoveItem(dayIdx, idx, "up"); }} disabled={idx === 0} className="w-7 h-7 rounded-lg flex items-center justify-center bg-muted hover:bg-chip-orange/10 text-muted-foreground hover:text-chip-orange disabled:opacity-30 transition-all text-xs">▲</button>
-                                          <button onClick={(e) => { e.stopPropagation(); handleMoveItem(dayIdx, idx, "down"); }} disabled={idx === day.items.length - 1} className="w-7 h-7 rounded-lg flex items-center justify-center bg-muted hover:bg-chip-orange/10 text-muted-foreground hover:text-chip-orange disabled:opacity-30 transition-all text-xs">▼</button>
-                                        </div>
-                                      )}
-
-                                      <img src={item.image && item.image !== "/placeholder.svg" ? item.image : getPlaceImage(item.title, item.bookingType)} alt={item.title} className="w-16 h-16 rounded-xl object-cover flex-shrink-0" />
-                                      <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2">
-                                          <span className="text-xs font-semibold text-chip-orange">{item.time}</span>
-                                        </div>
-                                        <h4 className="font-semibold text-foreground truncate">{item.title}</h4>
-                                        <p className="text-sm text-muted-foreground">{item.desc}</p>
-                                        {/* Hover actions - always visible on hover, no edit mode needed */}
-                                        <div className="flex items-center gap-2 mt-2">
-                                          <button onClick={(e) => handleBooking(e, item)} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-chip-yellow-light hover:bg-chip-orange/10 border border-chip-yellow/30 text-xs font-semibold text-chip-orange transition-all hover:shadow-warm">
-                                            <BookingIcon className="w-3 h-3" /> {bookingLabel} <ExternalLink className="w-3 h-3" />
-                                          </button>
-                                          <div className="hidden group-hover/item:flex items-center gap-1">
-                                            <button onClick={(e) => { e.stopPropagation(); setSwapModal({ open: true, item, dayIdx, itemIdx: idx }); }} className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-muted hover:bg-chip-orange/10 border border-border text-xs font-medium text-muted-foreground hover:text-chip-orange transition-all" title="Đổi">
-                                              <RefreshCw className="w-3 h-3" />
-                                            </button>
-                                            <button onClick={(e) => { e.stopPropagation(); handleDeleteItem(dayIdx, idx); }} className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-muted hover:bg-destructive/10 border border-border text-xs font-medium text-muted-foreground hover:text-destructive transition-all" title="Xóa">
-                                              <Trash2 className="w-3 h-3" />
-                                            </button>
-                                            <button onClick={(e) => { e.stopPropagation(); handleMoveItem(dayIdx, idx, "up"); }} disabled={idx === 0} className="inline-flex items-center px-1.5 py-1 rounded-lg bg-muted hover:bg-chip-orange/10 border border-border text-xs text-muted-foreground hover:text-chip-orange disabled:opacity-30 transition-all" title="Lên">
-                                              <ArrowUp className="w-3 h-3" />
-                                            </button>
-                                            <button onClick={(e) => { e.stopPropagation(); handleMoveItem(dayIdx, idx, "down"); }} disabled={idx === day.items.length - 1} className="inline-flex items-center px-1.5 py-1 rounded-lg bg-muted hover:bg-chip-orange/10 border border-border text-xs text-muted-foreground hover:text-chip-orange disabled:opacity-30 transition-all" title="Xuống">
-                                              <ArrowDown className="w-3 h-3" />
-                                            </button>
-                                          </div>
-                                        </div>
-                                      </div>
-                                      <div className="text-right flex-shrink-0">
-                                        <span className="text-sm font-bold text-foreground">{item.cost}</span>
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </motion.div>
+                  {/* Horizontal day tabs */}
+                  <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
+                    {trip.days.map((day, dayIdx) => {
+                      const completedCount = day.items.filter((_, idx) => completedItems.has(`${dayIdx}-${idx}`)).length;
+                      const allDone = completedCount === day.items.length && day.items.length > 0;
+                      return (
+                        <button
+                          key={dayIdx}
+                          onClick={() => setActiveDay(dayIdx)}
+                          className={`flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 transition-all text-sm font-medium ${
+                            activeDay === dayIdx
+                              ? "border-chip-orange bg-chip-orange/10 text-chip-orange shadow-warm"
+                              : "border-border bg-card text-muted-foreground hover:border-chip-orange/40"
+                          }`}
+                        >
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${activeDay === dayIdx ? "bg-chip-orange text-white" : "bg-muted text-muted-foreground"}`}>
+                            {day.day}
+                          </span>
+                          <span className="hidden sm:inline">{day.date}</span>
+                          {allDone && <Check className="w-3.5 h-3.5 text-green-500" />}
+                          {!allDone && completedCount > 0 && (
+                            <span className="text-[10px] text-muted-foreground">{completedCount}/{day.items.length}</span>
                           )}
-                        </AnimatePresence>
-                      </motion.div>
-                    );
-                  })}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Active day items */}
+                  {trip.days[activeDay] && (
+                    <motion.div key={activeDay} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.2 }} className="space-y-3">
+                      <div className="space-y-3 pl-4 border-l-2 border-chip-orange/20 ml-4">
+                        {trip.days[activeDay].items.map((item, idx) => {
+                          const BookingIcon = bookingIcons[item.bookingType || "attraction"] || Ticket;
+                          const bookingLabel = bookingLabels[item.bookingType || "attraction"] || "Xem thêm";
+                          const isCompleted = completedItems.has(`${activeDay}-${idx}`);
+
+                          return (
+                            <div
+                              key={idx}
+                              onClick={() => !editMode && handleItemClick(item)}
+                              className={`relative flex gap-4 bg-card rounded-xl p-4 border border-border shadow-card hover:shadow-warm transition-all ml-4 ${editMode ? "" : "cursor-pointer hover:-translate-y-0.5"} group/item ${isCompleted ? "opacity-60" : ""}`}
+                            >
+                              <div className={`absolute -left-[1.6rem] top-5 w-3 h-3 rounded-full border-2 border-background ${isCompleted ? "bg-green-500" : "bg-chip-orange"}`} />
+
+                              {/* Completion checkbox */}
+                              <button
+                                onClick={(e) => toggleCompleted(activeDay, idx, e)}
+                                className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+                                  isCompleted
+                                    ? "border-green-500 bg-green-500 text-white"
+                                    : "border-border hover:border-chip-orange"
+                                }`}
+                              >
+                                {isCompleted && <Check className="w-3.5 h-3.5" />}
+                              </button>
+
+                              {editMode && (
+                                <div className="flex flex-col gap-1 flex-shrink-0">
+                                  <button onClick={(e) => { e.stopPropagation(); handleMoveItem(activeDay, idx, "up"); }} disabled={idx === 0} className="w-7 h-7 rounded-lg flex items-center justify-center bg-muted hover:bg-chip-orange/10 text-muted-foreground hover:text-chip-orange disabled:opacity-30 transition-all text-xs">▲</button>
+                                  <button onClick={(e) => { e.stopPropagation(); handleMoveItem(activeDay, idx, "down"); }} disabled={idx === trip.days[activeDay].items.length - 1} className="w-7 h-7 rounded-lg flex items-center justify-center bg-muted hover:bg-chip-orange/10 text-muted-foreground hover:text-chip-orange disabled:opacity-30 transition-all text-xs">▼</button>
+                                </div>
+                              )}
+
+                              <img src={item.image && item.image !== "/placeholder.svg" ? item.image : getPlaceImage(item.title, item.bookingType)} alt={item.title} className={`w-16 h-16 rounded-xl object-cover flex-shrink-0 ${isCompleted ? "grayscale" : ""}`} />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs font-semibold text-chip-orange">{item.time}</span>
+                                  {isCompleted && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 font-medium">Đã đi ✓</span>}
+                                </div>
+                                <h4 className={`font-semibold text-foreground truncate ${isCompleted ? "line-through" : ""}`}>{item.title}</h4>
+                                <p className="text-sm text-muted-foreground">{item.desc}</p>
+                                <div className="flex items-center gap-2 mt-2">
+                                  <button onClick={(e) => handleBooking(e, item)} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-chip-yellow-light hover:bg-chip-orange/10 border border-chip-yellow/30 text-xs font-semibold text-chip-orange transition-all hover:shadow-warm">
+                                    <BookingIcon className="w-3 h-3" /> {bookingLabel} <ExternalLink className="w-3 h-3" />
+                                  </button>
+                                  <div className="hidden group-hover/item:flex items-center gap-1">
+                                    <button onClick={(e) => { e.stopPropagation(); setSwapModal({ open: true, item, dayIdx: activeDay, itemIdx: idx }); }} className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-muted hover:bg-chip-orange/10 border border-border text-xs font-medium text-muted-foreground hover:text-chip-orange transition-all" title="Đổi">
+                                      <RefreshCw className="w-3 h-3" />
+                                    </button>
+                                    <button onClick={(e) => { e.stopPropagation(); handleDeleteItem(activeDay, idx); }} className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-muted hover:bg-destructive/10 border border-border text-xs font-medium text-muted-foreground hover:text-destructive transition-all" title="Xóa">
+                                      <Trash2 className="w-3 h-3" />
+                                    </button>
+                                    <button onClick={(e) => { e.stopPropagation(); handleMoveItem(activeDay, idx, "up"); }} disabled={idx === 0} className="inline-flex items-center px-1.5 py-1 rounded-lg bg-muted hover:bg-chip-orange/10 border border-border text-xs text-muted-foreground hover:text-chip-orange disabled:opacity-30 transition-all" title="Lên">
+                                      <ArrowUp className="w-3 h-3" />
+                                    </button>
+                                    <button onClick={(e) => { e.stopPropagation(); handleMoveItem(activeDay, idx, "down"); }} disabled={idx === trip.days[activeDay].items.length - 1} className="inline-flex items-center px-1.5 py-1 rounded-lg bg-muted hover:bg-chip-orange/10 border border-border text-xs text-muted-foreground hover:text-chip-orange disabled:opacity-30 transition-all" title="Xuống">
+                                      <ArrowDown className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="text-right flex-shrink-0">
+                                <span className="text-sm font-bold text-foreground">{item.cost}</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </motion.div>
+                  )}
                 </TabsContent>
 
                 <TabsContent value="packing" className="mt-4">

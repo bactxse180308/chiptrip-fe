@@ -397,10 +397,6 @@ const Result = () => {
                     <div className="flex gap-2 flex-wrap">
                       {dbTripId && <GroupPanel tripId={dbTripId} isOwner={true} />}
                       {dbTripId && <SplitBill tripId={dbTripId} memberNames={user ? { [user.id]: profile?.display_name || user.email?.split("@")[0] || "Bạn" } : {}} travelerCount={trip?.days?.[0]?.items ? undefined : 2} />}
-                      <Button variant={editMode ? "hero" : "soft"} size="sm" onClick={() => setEditMode(!editMode)}>
-                        {editMode ? <Check className="w-4 h-4" /> : <GripVertical className="w-4 h-4" />}
-                        {editMode ? "Xong" : "Sửa"}
-                      </Button>
                     </div>
                   )}
                 </div>

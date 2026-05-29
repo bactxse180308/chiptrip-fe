@@ -1,9 +1,9 @@
 import { Link, useLocation } from "react-router-dom";
+import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { MapPin, User, Zap, Moon, Sun, Crown, LogOut, Settings, UserCircle } from "lucide-react";
-import { getCredits } from "@/lib/trip-data";
-import { useEffect, useState, useRef } from "react";
-import { useAuth } from "@/hooks/useAuth";
+import { getCredits } from "@/features/planning/trip-data";
+import { useAuth } from "@/features/auth/useAuth";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 

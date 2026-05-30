@@ -1,22 +1,21 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
+import { Toaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "@/hooks/useAuth";
-import Index from "./pages/Index";
-import Planning from "./pages/Planning";
-import Result from "./pages/Result";
-import SavedPlans from "./pages/SavedPlans";
-import LocationDetail from "./pages/LocationDetail";
-import Auth from "./pages/Auth";
-import Premium from "./pages/Premium";
-import Checkout from "./pages/Checkout";
-import Profile from "./pages/Profile";
-import AdminUsers from "./pages/AdminUsers";
-import AdminLogin from "./pages/AdminLogin";
-import NotFound from "./pages/NotFound";
-import MobileNav from "./components/MobileNav";
+import { AuthProvider } from "@/features/auth/useAuth";
+import Index from "@/app/pages/Index";
+import Planning from "@/app/pages/Planning";
+import Result from "@/app/pages/Result";
+import SavedPlans from "@/app/pages/SavedPlans";
+import LocationDetail from "@/app/pages/LocationDetail";
+import Auth from "@/app/pages/Auth";
+import Premium from "@/app/pages/Premium";
+import Checkout from "@/app/pages/Checkout";
+import Profile from "@/app/pages/Profile";
+import AdminUsers from "@/features/admin/AdminUsers";
+import AdminLogin from "@/features/admin/AdminLogin";
+import NotFound from "@/app/pages/NotFound";
+import MobileNav from "@/components/MobileNav";
 
 const queryClient = new QueryClient();
 
@@ -24,7 +23,6 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
-      <Sonner />
       <BrowserRouter>
         <AuthProvider>
           <Routes>

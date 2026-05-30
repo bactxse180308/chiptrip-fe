@@ -38,6 +38,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(null);
     setSession(null);
     setProfile(null);
+    window.dispatchEvent(new Event("chiptrip-auth-change"));
     window.location.href = "/";
   };
 
@@ -48,25 +49,37 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // Re-read localStorage whenever storage changes (login/logout in another tab or direct localStorage manipulation)
   useEffect(() => {
-    const accessToken = authStorage.getAccessToken();
-    const refreshToken = authStorage.getRefreshToken();
-    const storedUser = authStorage.getUser() as AuthResponse | null;
+    const onStorage = () => {
+      const accessToken = authStorage.getAccessToken();
+      const refreshToken = authStorage.getRefreshToken();
+      const storedUser = authStorage.getUser() as AuthResponse | null;
 
-    if (accessToken && refreshToken && storedUser) {
-      setSession({ accessToken, refreshToken });
-      setUser({ id: storedUser.userId, email: storedUser.email, fullName: storedUser.fullName ?? null, role: storedUser.role });
-      setProfile({
-        userId: storedUser.userId,
-        email: storedUser.email,
-        fullName: storedUser.fullName ?? null,
-        avatarUrl: null,
-        aiCredits: 0,
-        createdAt: "",
-        role: storedUser.role,
-      });
-    }
-    setLoading(false);
+      if (accessToken && refreshToken && storedUser) {
+        setSession({ accessToken, refreshToken });
+        setUser({ id: storedUser.userId, email: storedUser.email, fullName: storedUser.fullName ?? null, role: storedUser.role });
+        setProfile({
+          userId: storedUser.userId,
+          email: storedUser.email,
+          fullName: storedUser.fullName ?? null,
+          avatarUrl: null,
+          aiCredits: 0,
+          createdAt: "",
+          role: storedUser.role,
+        });
+      } else {
+        authStorage.clear();
+        setUser(null);
+        setSession(null);
+        setProfile(null);
+      }
+      setLoading(false);
+    };
+
+    onStorage(); // run once on mount to pick up any existing session
+    window.addEventListener("chiptrip-auth-change", onStorage);
+    return () => window.removeEventListener("chiptrip-auth-change", onStorage);
   }, []);
 
   const isAdmin = user?.role === "ADMIN";

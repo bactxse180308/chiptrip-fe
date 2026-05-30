@@ -30,6 +30,7 @@ const Profile = () => {
   const [tripCount, setTripCount] = useState(0);
   const [showAvatarPreview, setShowAvatarPreview] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null);
 
   const effectiveProfile = profileData || ctxProfile;
 
@@ -43,6 +44,7 @@ const Profile = () => {
     if (effectiveProfile) {
       setDisplayName(effectiveProfile.fullName || "");
       setAvatarUrl(effectiveProfile.avatarUrl || "");
+      setAvatarPreviewUrl(null);
     }
   }, [effectiveProfile]);
 
@@ -65,7 +67,7 @@ const Profile = () => {
 
     setUploadingAvatar(true);
     try {
-      setAvatarUrl(URL.createObjectURL(file));
+      setAvatarPreviewUrl(URL.createObjectURL(file));
       toast.success("Đã cập nhật ảnh đại diện! 🎉");
     } catch (err: any) {
       toast.error("Upload thất bại: " + (err.message || "Lỗi không xác định"));
@@ -105,9 +107,9 @@ const Profile = () => {
             {/* Avatar & stats */}
             <div className="flex flex-col items-center gap-4">
               <div className="relative group">
-                {avatarUrl ? (
+                {avatarPreviewUrl ? (
                   <img
-                    src={avatarUrl}
+                    src="/placeholder.svg"
                     alt="Avatar"
                     className="w-24 h-24 rounded-full object-cover border-4 border-primary/20 cursor-pointer"
                     onClick={() => setShowAvatarPreview(true)}
@@ -207,7 +209,7 @@ const Profile = () => {
 
       {/* Avatar preview modal */}
       <AnimatePresence>
-        {showAvatarPreview && avatarUrl && (
+        {showAvatarPreview && avatarPreviewUrl && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -222,7 +224,7 @@ const Profile = () => {
               className="bg-card rounded-3xl border border-border shadow-xl p-6 max-w-sm w-full text-center"
               onClick={e => e.stopPropagation()}
             >
-              <img src={avatarUrl} alt="Avatar" className="w-48 h-48 rounded-full object-cover mx-auto border-4 border-primary/20 mb-4" />
+              <img src="/placeholder.svg" alt="Avatar" className="w-48 h-48 rounded-full object-cover mx-auto border-4 border-primary/20 mb-4" />
               <p className="text-lg font-semibold text-foreground">{displayName || "Avatar"}</p>
               <Button variant="ghost" size="sm" className="mt-4" onClick={() => setShowAvatarPreview(false)}>
                 Đóng

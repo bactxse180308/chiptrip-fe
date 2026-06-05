@@ -5,6 +5,7 @@ import { FileImage, FileText, Link2, Download, Check } from "lucide-react";
 import { toast } from "sonner";
 import type { TripPlan } from "@/features/planning/trip-data";
 import { getPlaceImage } from "@/features/planning/place-image";
+import { tripsApi } from "@/integrations/api";
 
 interface Props {
   trip: TripPlan;
@@ -24,22 +25,36 @@ const ExportDialog = ({ trip, dbTripId, children }: Props) => {
 
   const handleExport = async (type: string) => {
     setExporting(type);
-
-    // Simulate export
-    await new Promise(r => setTimeout(r, 1500));
-
-    if (type === "link") {
-      const shareId = dbTripId || trip.id;
-      await navigator.clipboard.writeText(`${window.location.origin}/result?id=${shareId}`);
-      toast.success("Đã sao chép link chia sẻ!");
-    } else if (type === "pdf") {
-      toast.success("PDF đang được tạo!", { description: "Tính năng sẽ hoạt động đầy đủ khi kết nối backend" });
-    } else if (type === "image") {
-      toast.success("Ảnh đang được tạo!", { description: "Tính năng sẽ hoạt động đầy đủ khi kết nối backend" });
+    try {
+      if (type === "link") {
+        const shareId = dbTripId || trip.id;
+        await navigator.clipboard.writeText(`${window.location.origin}/result?id=${shareId}`);
+        toast.success("Đã sao chép link chia sẻ!");
+        setExported(prev => [...prev, type]);
+      } else if (type === "pdf") {
+        if (!dbTripId) {
+          toast.error("Chưa lưu chuyến đi, không thể xuất PDF");
+          return;
+        }
+        const blob = await tripsApi.downloadPdf(Number(dbTripId));
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `chuyen-di-${dbTripId}.pdf`;
+        a.click();
+        URL.revokeObjectURL(url);
+        toast.success("Đã tải PDF!");
+        setExported(prev => [...prev, type]);
+      } else if (type === "image") {
+        await new Promise(r => setTimeout(r, 1500));
+        toast.success("Ảnh đang được tạo!", { description: "Tính năng sẽ hoạt động đầy đủ khi kết nối backend" });
+        setExported(prev => [...prev, type]);
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Xuất thất bại, vui lòng thử lại");
+    } finally {
+      setExporting(null);
     }
-
-    setExported(prev => [...prev, type]);
-    setExporting(null);
   };
 
   return (

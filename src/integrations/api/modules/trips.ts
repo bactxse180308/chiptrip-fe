@@ -70,4 +70,11 @@ export const tripsApi = {
     const { data } = await apiClient.get<ApiResponse<TripDetail>>(`/trips/shared/${shareToken}`);
     return data.data;
   },
+
+  downloadPdf: async (id: number): Promise<Blob> => {
+    const response = await apiClient.get(`/trips/${id}/export/pdf`, {
+      responseType: "blob",
+    });
+    return response.data as Blob;
+  },
 };

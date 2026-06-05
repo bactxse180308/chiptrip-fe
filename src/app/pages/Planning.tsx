@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Search, CalendarDays, ArrowRight, ArrowLeft, Sparkles, Loader2, Check, ArrowLeftRight, MapPin, Users, Wallet, AlertCircle, RotateCcw } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { useAuth } from "@/features/auth/useAuth";
-import { tripsApi } from "@/integrations/api";
+import { tripsApi, aiApi } from "@/integrations/api";
 import { mapTripDetailToPlan } from "@/lib/trip-mapper";
 import { toast } from "sonner";
 import ChipMascot from "@/features/result/ChipMascot";
@@ -148,31 +148,20 @@ const Planning = () => {
   const handleSuggest = async () => {
     setIsSuggesting(true);
     try {
-      const vibeText = [...vibes.map(v => vibeOptions.find(o => o.id === v)?.label || v), customVibe].filter(Boolean).join(", ");
-      const budgetLabels = ["< 500K", "500K-1M", "1-2M", "2-3M", "3-5M", "5-8M", "8-12M", "12M+"];
-      const budgetText = budgetLabels[suggestBudget[0]] || "3-5M";
+      const selectedStyles = [...vibes];
+      if (customVibe.trim()) selectedStyles.push(customVibe.trim());
 
-      const { data } = await tripsApi.generate({
-        departure: "Hà Nội",
-        destination: "Đà Nẵng",
-        tripType: "roundtrip",
-        startDate: new Date().toISOString().slice(0, 10),
-        endDate: new Date().toISOString().slice(0, 10),
-        departureTime,
-        returnTime,
+      const suggestions = await aiApi.suggestDestinations({
+        styles: selectedStyles,
         budgetVnd: BUDGET_VND_MAP[suggestBudget[0]] ?? 4_000_000,
-        styles: vibes,
-        peopleCount: 2,
-        tickets: 2,
+        days: suggestDays,
       });
 
-      if (!data) throw new Error("Không nhận được phản hồi từ server");
-
-      setSuggestedPlaces([]);
+      setSuggestedPlaces(suggestions ?? []);
       setSuggestStep(1);
     } catch (err: any) {
       console.error("Suggest failed:", err);
-      toast.error(err.message || "Gợi ý thất bại, vui lòng thử lại");
+      toast.error(err?.response?.data?.error?.message || err.message || "Gợi ý thất bại, vui lòng thử lại");
     } finally {
       setIsSuggesting(false);
     }

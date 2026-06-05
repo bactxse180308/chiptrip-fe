@@ -1,12 +1,11 @@
 import { useState, useEffect } from "react";
 import { Cloud, AlertTriangle } from "lucide-react";
-import { supabase } from "@/config/supabase";
+import { weatherApi, type WeatherDayForecast } from "@/integrations/api";
 
 interface WeatherForecast {
   date: string;
   tempMax: number;
   tempMin: number;
-  rain: number;
   label: string;
   emoji: string;
   shouldGoIndoor: boolean;
@@ -14,31 +13,75 @@ interface WeatherForecast {
 
 interface WeatherWidgetProps {
   destination: string;
-  dates: string[]; // array of date strings
+  dates: string[]; // array of date strings (sorted ascending)
 }
+
+// Map OpenWeather icon code -> emoji + "nên ở trong nhà" flag
+const mapIcon = (icon: string | null): { emoji: string; indoor: boolean } => {
+  const code = (icon ?? "").slice(0, 2);
+  switch (code) {
+    case "01": return { emoji: "☀️", indoor: false };
+    case "02": return { emoji: "🌤️", indoor: false };
+    case "03": return { emoji: "⛅", indoor: false };
+    case "04": return { emoji: "☁️", indoor: false };
+    case "09": return { emoji: "🌧️", indoor: true };
+    case "10": return { emoji: "🌦️", indoor: true };
+    case "11": return { emoji: "⛈️", indoor: true };
+    case "13": return { emoji: "❄️", indoor: true };
+    case "50": return { emoji: "🌫️", indoor: false };
+    default: return { emoji: "🌡️", indoor: false };
+  }
+};
+
+const toForecast = (f: WeatherDayForecast): WeatherForecast => {
+  const { emoji, indoor } = mapIcon(f.icon);
+  return {
+    date: f.date,
+    tempMax: Math.round(f.tempMax ?? 0),
+    tempMin: Math.round(f.tempMin ?? 0),
+    label: f.description ?? f.condition ?? "",
+    emoji,
+    shouldGoIndoor: indoor,
+  };
+};
+
+/** Convert dd/MM/yyyy → yyyy-MM-dd. Already-ISO strings pass through unchanged. */
+const toIso = (s: string): string => {
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) {
+    const [d, m, y] = s.split("/");
+    return `${y}-${m}-${d}`;
+  }
+  return s;
+};
 
 const WeatherWidget = ({ destination, dates }: WeatherWidgetProps) => {
   const [forecast, setForecast] = useState<WeatherForecast[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // dates may arrive as dd/MM/yyyy from trip-mapper — normalise to yyyy-MM-dd for the API
+  const isoDates = dates.map(toIso);
+  const from = isoDates[0];
+  const to = isoDates[isoDates.length - 1];
+
   useEffect(() => {
-    if (!destination) return;
+    if (!destination || !from || !to) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
-    supabase.functions
-      .invoke("get-weather", { body: { destination } })
-      .then(({ data, error: err }) => {
-        if (err || data?.error) {
-          setError("Không tải được thời tiết");
-        } else if (data?.forecast) {
-          // Filter to only trip dates
-          const tripDates = new Set(dates);
-          const filtered = data.forecast.filter((f: WeatherForecast) => tripDates.has(f.date));
-          setForecast(filtered.length > 0 ? filtered : data.forecast.slice(0, dates.length || 3));
-        }
-        setLoading(false);
-      });
-  }, [destination]);
+    setError("");
+    weatherApi
+      .getForecast(destination, from, to)
+      .then((data) => {
+        const all = (data?.forecasts ?? []).map(toForecast);
+        const tripIso = new Set(isoDates);
+        const filtered = all.filter((f) => tripIso.has(f.date));
+        setForecast(filtered.length > 0 ? filtered : all.slice(0, isoDates.length || 3));
+      })
+      .catch(() => setError("Không tải được thời tiết"))
+      .finally(() => setLoading(false));
+  }, [destination, from, to]);
 
   if (loading) {
     return (

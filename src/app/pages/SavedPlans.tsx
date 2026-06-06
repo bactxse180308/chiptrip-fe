@@ -68,8 +68,8 @@ const SavedPlans = () => {
   const handleShareTrip = async (id: string, title: string) => {
     try {
       const { tripsApi } = await import("@/integrations/api");
-      const { data } = await tripsApi.enableShare(Number(id));
-      const shareUrl = `${window.location.origin}/result?shared=${data.shareToken}`;
+      const result = await tripsApi.enableShare(Number(id));
+      const shareUrl = `${window.location.origin}/result?shared=${result.shareToken}`;
       await navigator.clipboard.writeText(shareUrl);
       toast.success("Đã sao chép link chia sẻ!", { description: shareUrl });
     } catch (err) {

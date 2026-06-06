@@ -5,8 +5,30 @@ import {
   Users, MapPin, Shield, ArrowLeft, Loader2,
   Trash2, BarChart3, Plane, Search, Eye,
   DollarSign, BrainCircuit, CreditCard, Zap,
-  UserX, UserCheck, LogOut, Moon, Sun,
+  UserX, UserCheck, LogOut, Moon, Sun, MessageCircle,
 } from "lucide-react";
+import { useAdminConversations } from "@/features/chat/useAdminChat";
+
+function AdminChatNavLink() {
+  const { data: conversations = [] } = useAdminConversations("OPEN");
+  const totalUnread = conversations.reduce((sum, c) => sum + c.unreadCount, 0);
+  return (
+    <Link
+      to="/admin/chat"
+      className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+    >
+      <span className="flex items-center gap-3">
+        <MessageCircle className="w-4 h-4 shrink-0" />
+        Tin nhắn
+      </span>
+      {totalUnread > 0 && (
+        <span className="min-w-[20px] h-5 px-1 rounded-full bg-destructive text-destructive-foreground text-[11px] font-bold flex items-center justify-center">
+          {totalUnread > 99 ? "99+" : totalUnread}
+        </span>
+      )}
+    </Link>
+  );
+}
 import { useAuth } from "@/features/auth/useAuth";
 import {
   adminApi,
@@ -293,6 +315,7 @@ const AdminUsers = () => {
               {item.label}
             </button>
           ))}
+          <AdminChatNavLink />
         </nav>
 
         {/* Footer */}

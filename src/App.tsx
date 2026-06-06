@@ -14,8 +14,10 @@ import Checkout from "@/app/pages/Checkout";
 import Profile from "@/app/pages/Profile";
 import AdminUsers from "@/features/admin/AdminUsers";
 import AdminLogin from "@/features/admin/AdminLogin";
+import AdminChatInbox from "@/features/admin/AdminChatInbox";
 import NotFound from "@/app/pages/NotFound";
 import MobileNav from "@/components/MobileNav";
+import { ChatWidget } from "@/features/chat/ChatWidget";
 
 const queryClient = new QueryClient();
 
@@ -37,9 +39,11 @@ const App = () => (
             <Route path="/profile" element={<Profile />} />
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/admin/users" element={<AdminUsers />} />
+            <Route path="/admin/chat" element={<AdminChatInbox />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           <MobileNav />
+          <ChatWidget />
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

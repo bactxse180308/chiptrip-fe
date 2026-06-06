@@ -6,6 +6,56 @@ export interface ApiResponse<T> {
   timestamp: string;
 }
 
+export type NotificationType =
+  | "TRIP_MEMBER_ADDED"
+  | "TRIP_REMINDER"
+  | "AI_CREDITS_LOW"
+  | "WEATHER_ALERT"
+  | "SUPPORT_REPLY"
+  | "NEW_SUPPORT_MESSAGE";
+
+// ====== Chat (support) ======
+export type ConversationStatus = "OPEN" | "CLOSED";
+export type SenderRole = "USER" | "ADMIN";
+export type MessageType = "TEXT" | "IMAGE";
+
+export interface MessageDto {
+  id: number;
+  conversationId: number;
+  senderRole: SenderRole;
+  messageType: MessageType;
+  content: string | null;
+  imageUrl: string | null;
+  createdAt: string;
+}
+
+export interface ConversationDto {
+  id: number;
+  status: ConversationStatus;
+  lastMessageAt: string | null;
+  unreadCount: number;
+}
+
+export interface AdminConversationDto {
+  id: number;
+  userId: number;
+  userName: string;
+  userEmail: string;
+  lastMessageAt: string | null;
+  lastMessagePreview: string | null;
+  unreadCount: number;
+}
+
+export interface NotificationDto {
+  id: number;
+  type: NotificationType;
+  title: string;
+  body: string | null;
+  refId: number | null;
+  isRead: boolean;
+  createdAt: string;
+}
+
 export interface AuthResponse {
   accessToken: string;
   refreshToken: string;

@@ -77,6 +77,8 @@ apiClient.interceptors.response.use(
         if (data.data.refreshToken) {
           authStorage.setRefreshToken(data.data.refreshToken);
         }
+        // Báo cho các WS socket (notifications, chat) reconnect với token mới
+        window.dispatchEvent(new Event("chiptrip-auth-change"));
         onTokenRefreshed(newAccessToken);
         isRefreshing = false;
 

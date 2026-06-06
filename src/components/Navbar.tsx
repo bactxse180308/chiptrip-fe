@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { MapPin, User, Zap, Moon, Sun, Crown, LogOut, Settings, UserCircle } from "lucide-react";
 import { getCredits } from "@/features/planning/trip-data";
 import { useAuth } from "@/features/auth/useAuth";
+import { NotificationBell } from "@/features/notifications/NotificationBell";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -79,6 +80,9 @@ const Navbar = () => {
               <span className="text-xs text-muted-foreground">lượt AI</span>
             </div>
           )}
+
+          {/* Notification bell — chỉ khi đã đăng nhập */}
+          {user && <NotificationBell />}
 
           {/* Dark mode toggle */}
           <button

@@ -6,6 +6,8 @@ export { placesApi } from "./modules/places";
 export { membersApi } from "./modules/members";
 export { aiApi } from "./modules/ai";
 export { weatherApi } from "./modules/weather";
+export { notificationsApi } from "./modules/notifications";
+export { chatApi, adminChatApi } from "./modules/chat";
 export * from "./modules/places";
 export * from "./modules/ai";
 export * from "./modules/weather";

@@ -110,8 +110,16 @@ const Auth = () => {
       toast.success("Đăng nhập thành công!");
       navigate("/", { replace: true });
     } catch (error: any) {
-      const msg = error.response?.data?.message || error.message || "Có lỗi xảy ra";
-      toast.error(msg);
+      if (error.response?.data?.code === "EMAIL_NOT_VERIFIED") {
+        toast.error("Email chưa được xác nhận.", {
+          description: "Vui lòng nhập mã OTP đã gửi đến email của bạn.",
+        });
+        setForm(prev => ({ ...prev, password: "" }));
+        setStep("verify-email-otp");
+      } else {
+        const msg = error.response?.data?.message || error.message || "Có lỗi xảy ra";
+        toast.error(msg);
+      }
     } finally {
       setLoading(false);
     }
@@ -133,11 +141,12 @@ const Auth = () => {
     setLoading(true);
     try {
       await authApi.register({ email: form.email, password: form.password, fullName: form.name });
-      toast.success("Đăng ký thành công! Mã xác nhận đã được gửi đến email.", {
-        description: "Bạn có thể đăng nhập ngay hoặc xác nhận email sau.",
+      toast.success("Mã xác nhận đã được gửi đến email!", {
+        description: "Vui lòng nhập mã 6 chữ số để hoàn tất đăng ký.",
       });
       setForm(prev => ({ ...prev, name: "", password: "", confirmPassword: "" }));
-      setStep("login");
+      startCountdown();
+      setStep("verify-email-otp");
     } catch (error: any) {
       const msg = error.response?.data?.message || error.message || "Có lỗi xảy ra";
       toast.error(msg);

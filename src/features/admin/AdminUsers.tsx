@@ -45,6 +45,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { parseTripStyles } from "@/lib/trip-mapper";
 import { format, subDays } from "date-fns";
 import { vi } from "date-fns/locale";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, FunnelChart, Funnel, LabelList } from "recharts";
@@ -102,6 +103,7 @@ const AdminUsers = () => {
   const [editingUser, setEditingUser] = useState<AdminUserSummary | null>(null);
   const [editCredits, setEditCredits] = useState("");
   const [confirmDeactivate, setConfirmDeactivate] = useState<AdminUserSummary | null>(null);
+  const [confirmDeleteTrip, setConfirmDeleteTrip] = useState<AdminTripSummary | null>(null);
   const [dark, setDark] = useState(() => document.documentElement.classList.contains("dark"));
 
   useEffect(() => {
@@ -262,11 +264,12 @@ const AdminUsers = () => {
     }
   };
 
-  const handleDeleteTrip = async (tripId: number) => {
-    if (!confirm("Bạn chắc chắn muốn xóa chuyến đi này?")) return;
+  const handleDeleteTripConfirmed = async () => {
+    if (!confirmDeleteTrip) return;
     try {
-      await adminApi.deleteTrip(tripId);
-      setTrips((prev) => prev.filter((t) => t.id !== tripId));
+      await adminApi.deleteTrip(confirmDeleteTrip.id);
+      setTrips((prev) => prev.filter((t) => t.id !== confirmDeleteTrip.id));
+      setConfirmDeleteTrip(null);
       toast.success("Đã xóa chuyến đi");
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Không thể xóa chuyến đi");
@@ -602,6 +605,15 @@ const AdminUsers = () => {
                             </TableCell>
                             <TableCell className="text-center">
                               <div className="flex items-center justify-center gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => navigate(`/admin/users/${u.id}`)}
+                                  aria-label={`Xem chi tiết ${u.email}`}
+                                >
+                                  <Eye className="w-3.5 h-3.5" />
+                                </Button>
                                 {u.isActive ? (
                                   <Button
                                     variant="ghost"
@@ -649,6 +661,57 @@ const AdminUsers = () => {
             {/* ── TRIPS TAB ── */}
             {activeTab === "trips" && (
               <>
+                {/* Delete trip confirmation modal */}
+                <AnimatePresence>
+                  {confirmDeleteTrip && (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+                      onClick={() => setConfirmDeleteTrip(null)}
+                    >
+                      <motion.div
+                        initial={{ scale: 0.9, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        className="bg-card rounded-2xl border border-border shadow-xl p-6 max-w-sm w-full"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-10 h-10 rounded-full bg-destructive/10 flex items-center justify-center shrink-0">
+                            <Trash2 className="w-5 h-5 text-destructive" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-foreground">Xóa chuyến đi?</h3>
+                            <p className="text-xs text-muted-foreground mt-0.5">Hành động này không thể hoàn tác</p>
+                          </div>
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-1">Chuyến đi sẽ bị xóa vĩnh viễn:</p>
+                        <p className="text-sm font-medium text-foreground">{confirmDeleteTrip.destination}</p>
+                        {confirmDeleteTrip.userEmail && (
+                          <p className="text-xs text-muted-foreground mb-1">
+                            Chủ chuyến: {confirmDeleteTrip.userFullName || "Chưa đặt tên"} · {confirmDeleteTrip.userEmail}
+                          </p>
+                        )}
+                        <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 rounded-lg px-3 py-2 my-4">
+                          Toàn bộ ngày, hoạt động, checklist và lượt thích/bình luận của chuyến đi này sẽ bị xóa.
+                        </p>
+                        <div className="flex gap-2">
+                          <Button variant="ghost" className="flex-1" onClick={() => setConfirmDeleteTrip(null)}>
+                            Hủy
+                          </Button>
+                          <Button
+                            className="flex-1 bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                            onClick={handleDeleteTripConfirmed}
+                          >
+                            <Trash2 className="w-4 h-4 mr-1.5" /> Xóa chuyến đi
+                          </Button>
+                        </div>
+                      </motion.div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
                 <div className="mb-4">
                   <div className="relative max-w-sm">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -670,6 +733,7 @@ const AdminUsers = () => {
                         <TableRow>
                           <TableHead className="w-10">#</TableHead>
                           <TableHead>Điểm đến</TableHead>
+                          <TableHead>Chủ chuyến đi</TableHead>
                           <TableHead className="hidden sm:table-cell">Tạo lúc</TableHead>
                           <TableHead className="hidden md:table-cell">Thời gian</TableHead>
                           <TableHead className="text-center hidden sm:table-cell">Người đi</TableHead>
@@ -677,7 +741,9 @@ const AdminUsers = () => {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {filteredTrips.map((t, idx) => (
+                        {filteredTrips.map((t, idx) => {
+                          const tripStyles = parseTripStyles(t.styles);
+                          return (
                           <TableRow key={t.id}>
                             <TableCell className="text-muted-foreground font-mono text-xs">{idx + 1}</TableCell>
                             <TableCell>
@@ -685,15 +751,36 @@ const AdminUsers = () => {
                                 <MapPin className="w-4 h-4 text-primary shrink-0" />
                                 <div>
                                   <p className="font-medium text-foreground text-sm">{t.destination}</p>
-                                  {t.styles && (
+                                  {tripStyles.length > 0 && (
                                     <div className="flex gap-1 mt-1 flex-wrap">
-                                      {(t.styles || "").split(",").slice(0, 2).map((s) => (
-                                        <Badge key={s} variant="secondary" className="text-[10px] px-1.5 py-0">{s.trim()}</Badge>
+                                      {tripStyles.slice(0, 3).map((s) => (
+                                        <Badge key={s} variant="secondary" className="text-[10px] px-1.5 py-0">{s}</Badge>
                                       ))}
                                     </div>
                                   )}
                                 </div>
                               </div>
+                            </TableCell>
+                            <TableCell>
+                              {t.userId ? (
+                                <button
+                                  onClick={() => navigate(`/admin/users/${t.userId}`)}
+                                  className="flex items-center gap-2 text-left group"
+                                  aria-label={`Xem chủ chuyến đi ${t.userEmail}`}
+                                >
+                                  <div className="w-7 h-7 rounded-full bg-primary/15 flex items-center justify-center text-[11px] font-bold text-primary shrink-0">
+                                    {(t.userFullName || t.userEmail || "?")[0].toUpperCase()}
+                                  </div>
+                                  <div className="min-w-0">
+                                    <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
+                                      {t.userFullName || "Chưa đặt tên"}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground truncate">{t.userEmail}</p>
+                                  </div>
+                                </button>
+                              ) : (
+                                <span className="text-sm text-muted-foreground">—</span>
+                              )}
                             </TableCell>
                             <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
                               {t.createdAt ? format(new Date(t.createdAt), "dd/MM/yyyy", { locale: vi }) : "—"}
@@ -721,7 +808,7 @@ const AdminUsers = () => {
                                   variant="ghost"
                                   size="icon"
                                   className="h-8 w-8 text-destructive hover:text-destructive"
-                                  onClick={() => handleDeleteTrip(t.id)}
+                                  onClick={() => setConfirmDeleteTrip(t)}
                                   aria-label="Xóa chuyến đi"
                                 >
                                   <Trash2 className="w-4 h-4" />
@@ -729,7 +816,8 @@ const AdminUsers = () => {
                               </div>
                             </TableCell>
                           </TableRow>
-                        ))}
+                          );
+                        })}
                       </TableBody>
                     </Table>
                     {filteredTrips.length === 0 && !tripsLoading && (

@@ -37,13 +37,16 @@ const bookingLabels: Record<string, string> = {
 const Result = () => {
   const navigate = useNavigate();
   const { state } = useLocation();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user, profile } = useAuth();
   const [swapModal, setSwapModal] = useState<{ open: boolean; item: TripItem | null; dayIdx: number; itemIdx: number }>({ open: false, item: null, dayIdx: 0, itemIdx: 0 });
   const [dbTripId, setDbTripId] = useState<number | null>(null);
   const [trip, setTrip] = useState<TripPlan | null>(null);
   const [completedItems, setCompletedItems] = useState<Set<string>>(new Set());
-  const [activeDay, setActiveDay] = useState(0);
+  const [activeDay, setActiveDay] = useState(() => {
+    const d = Number(searchParams.get("day"));
+    return Number.isInteger(d) && d >= 0 ? d : 0;
+  });
   const dayTabsRef = useRef<HTMLDivElement>(null);
   const dayButtonRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const [isSharedView, setIsSharedView] = useState(false);
@@ -73,14 +76,23 @@ const Result = () => {
   const tripStatus = remoteTrip?.status ?? sharedTrip?.status ?? null;
 
   // Chuyến ONGOING: auto-focus đúng ngày hôm nay thay vì luôn mở Ngày 1
+  // (chỉ khi người dùng chưa tự chọn ngày qua URL ?day=)
   useEffect(() => {
+    if (searchParams.get("day") != null) return;
     const detail = remoteTrip ?? sharedTrip;
     if (!detail || detail.status !== "ONGOING" || !detail.days?.length) return;
     const now = new Date();
     const todayIso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
     const idx = detail.days.findIndex((d) => d.date === todayIso);
     if (idx >= 0) setActiveDay(idx);
-  }, [remoteTrip, sharedTrip]);
+  }, [remoteTrip, sharedTrip, searchParams]);
+
+  // Giữ activeDay trong khoảng hợp lệ khi trip đã tải (tránh ngày trong URL vượt số ngày)
+  useEffect(() => {
+    if (trip && activeDay > trip.days.length - 1) {
+      setActiveDay(Math.max(0, trip.days.length - 1));
+    }
+  }, [trip, activeDay]);
 
   const handlePublishToggle = async () => {
     if (!dbTripId) {
@@ -178,11 +190,16 @@ const Result = () => {
 
   const handleDayClick = useCallback((dayIdx: number) => {
     setActiveDay(dayIdx);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set("day", String(dayIdx));
+      return next;
+    }, { replace: true });
     const btn = dayButtonRefs.current[dayIdx];
     if (btn) {
       btn.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
     }
-  }, []);
+  }, [setSearchParams]);
 
   useEffect(() => {
     if (dbTripId) {

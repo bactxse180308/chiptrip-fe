@@ -26,6 +26,10 @@ export interface AdminTripSummary {
   budgetVnd: number | null;
   styles: string | null;
   createdAt: string;
+  // Có ở danh sách /admin/trips (chủ chuyến đi); không có ở trips trong chi tiết user.
+  userId?: number;
+  userFullName?: string | null;
+  userEmail?: string;
 }
 
 export interface AdminAiUsageSummary {
@@ -33,6 +37,26 @@ export interface AdminAiUsageSummary {
   totalTokensIn: number;
   totalTokensOut: number;
   totalCostUsd: number;
+}
+
+export interface AdminPaymentOrder {
+  id: number;
+  orderCode: string;
+  planCode: string;
+  amountVnd: number;
+  credits: number;
+  status: "PENDING" | "PAID";
+  createdAt: string;
+  paidAt: string | null;
+}
+
+export interface AdminPaymentSummary {
+  premium: boolean;
+  paidOrderCount: number;
+  totalSpentVnd: number;
+  totalCreditsPurchased: number;
+  lastPaidAt: string | null;
+  orders: AdminPaymentOrder[];
 }
 
 export interface AdminUserDetail {
@@ -50,6 +74,7 @@ export interface AdminUserDetail {
   trips: AdminTripSummary[];
   aiUsage: AdminAiUsageSummary | null;
   activeSessionCount: number;
+  payment: AdminPaymentSummary | null;
 }
 
 export interface AdminDashboard {

@@ -178,7 +178,7 @@ const LocationDetail = () => {
           <Button
             variant="soft"
             size="sm"
-            className="absolute top-24 left-6 bg-background/80 backdrop-blur-sm z-20"
+            className="fixed top-24 left-6 bg-background/80 backdrop-blur-sm shadow-md z-30"
             onClick={(e) => { e.stopPropagation(); navigate(-1); }}
           >
             <ArrowLeft className="w-4 h-4" /> Quay lại

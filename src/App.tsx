@@ -24,6 +24,7 @@ const Checkout = lazy(() => import("@/app/pages/Checkout"));
 const PaymentSuccess = lazy(() => import("@/app/pages/PaymentSuccess"));
 const Profile = lazy(() => import("@/app/pages/Profile"));
 const AdminUsers = lazy(() => import("@/features/admin/AdminUsers"));
+const AdminUserDetail = lazy(() => import("@/features/admin/AdminUserDetail"));
 const AdminLogin = lazy(() => import("@/features/admin/AdminLogin"));
 const AdminChatInbox = lazy(() => import("@/features/admin/AdminChatInbox"));
 const NotFound = lazy(() => import("@/app/pages/NotFound"));
@@ -71,6 +72,7 @@ const App = () => (
               <Route path="/admin/login" element={<AdminLogin />} />
               <Route path="/admin/dashboard" element={<Navigate to="/admin/users" replace />} />
               <Route path="/admin/users" element={<AdminUsers />} />
+              <Route path="/admin/users/:id" element={<AdminUserDetail />} />
               <Route path="/admin/chat" element={<AdminChatInbox />} />
               <Route path="*" element={<NotFound />} />
             </Routes>

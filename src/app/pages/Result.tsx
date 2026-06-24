@@ -615,7 +615,7 @@ const Result = () => {
           <div className="grid lg:grid-cols-5 gap-6 lg:gap-8">
             {/* ── Left: map + costs + add-ons (after the itinerary on mobile) ── */}
             <div className="lg:col-span-2 order-2 lg:order-1">
-              <div className="sticky top-24 space-y-4">
+              <div className="lg:sticky lg:top-24 space-y-4">
                 <div data-reveal className="rounded-2xl overflow-hidden border border-border bg-card shadow-ticket">
                   <div className="flex items-center justify-between px-4 py-2.5 border-b border-dashed border-border">
                     <span className="font-mono text-[11px] font-bold tracking-[0.18em] uppercase text-chip-teal-ink flex items-center gap-1.5">
@@ -795,7 +795,7 @@ const Result = () => {
                   {trip.days[activeDay] && (
                     <div ref={dayListRef} className="relative pt-1">
                       {/* the route ink threading the day's stops */}
-                      <div className="route-spine pointer-events-none absolute top-3 bottom-6 left-7 -translate-x-1/2 w-[2px] rounded-full" aria-hidden="true" />
+                      <div className="route-spine pointer-events-none absolute top-9 bottom-10 left-7 -translate-x-1/2 w-[2px] rounded-full" aria-hidden="true" />
                       <ol key={activeDay} className="space-y-2.5">
                         {trip.days[activeDay].items.map((item, idx) => {
                           // Chuyến bay: TRANSPORT có tên/desc chỉ chuyến bay → trỏ tới card vé máy bay thay vì "Đặt xe trên Grab"

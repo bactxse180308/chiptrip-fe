@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@googlemaps/js-api-loader": "^1.16.10",
+    "@gsap/react": "^2.1.2",
     "@hookform/resolvers": "^3.10.0",
     "@lovable.dev/cloud-auth-js": "^1.0.0",
     "@radix-ui/react-alert-dialog": "^1.1.14",
@@ -38,6 +39,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
     "framer-motion": "^12.34.3",
+    "gsap": "^3.15.0",
     "lucide-react": "^0.462.0",
     "posthog-js": "^1.386.6",
     "react": "^18.3.1",

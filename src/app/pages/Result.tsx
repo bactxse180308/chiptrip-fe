@@ -1,13 +1,19 @@
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { motion } from "framer-motion";
+import { useQueryClient } from "@tanstack/react-query";
+import { useGSAP } from "@gsap/react";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { SplitText } from "gsap/SplitText";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MapPin, Clock, Wallet, Star, Bookmark, Share2, Check, Download, ExternalLink, Hotel, UtensilsCrossed, Ticket, Coffee, Copy, Trash2, RefreshCw, Loader2, ArrowUp, ArrowDown, Plane, Globe } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { MapPin, Clock, Wallet, Star, Bookmark, Share2, Check, Download, ExternalLink, Hotel, UtensilsCrossed, Ticket, Coffee, Copy, Trash2, RefreshCw, Loader2, ArrowUp, ArrowDown, Plane, Globe, MoreHorizontal } from "lucide-react";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { toast } from "sonner";
 import Navbar from "@/components/Navbar";
 import GoongMap, { type GoongMapPin } from "@/components/GoongMap";
-import { generatePackingList, type TripPlan, type TripItem } from "@/features/planning/trip-data";
+import SafeImage from "@/components/SafeImage";
+import { type TripPlan, type TripItem } from "@/features/planning/trip-data";
 import { getPlaceImage } from "@/features/planning/place-image";
 import PackingList from "@/features/result/PackingList";
 import ExportDialog from "@/features/result/ExportDialog";
@@ -18,12 +24,31 @@ import GroupPanel from "@/features/result/GroupPanel";
 import SplitBill from "@/features/result/SplitBill";
 import { useAuth } from "@/features/auth/useAuth";
 import { tripsApi } from "@/integrations/api";
-import { useTripDetail, useSharedTrip, useCloneTrip, useEnableShare } from "@/hooks/useApi";
+import type { ActivityDetail, TripDetail } from "@/integrations/api/types";
+import type { ReplaceActivityResponse } from "@/integrations/api/modules/trips";
+import { queryKeys, useTripDetail, useSharedTrip, useCloneTrip, useEnableShare } from "@/hooks/useApi";
 import { usePublishTrip } from "@/features/explore/hooks/usePublicFeed";
 import { mapTripDetailToPlan } from "@/lib/trip-mapper";
 import { getDirection, getConsecutiveTravelTimes, formatDuration, formatDistance } from "@/lib/goong";
 import { trackEvent } from "@/lib/analytics";
 import ChipMascot from "@/features/result/ChipMascot";
+
+gsap.registerPlugin(useGSAP, ScrollTrigger, SplitText);
+
+/* On-brand duck mark for the boarding-pass stub (decorative). */
+const ChipDuck = ({ className = "" }: { className?: string }) => (
+  <svg viewBox="0 0 64 64" className={className} aria-hidden="true">
+    <ellipse cx="28" cy="42" rx="20" ry="15" fill="hsl(var(--chip-yellow))" />
+    <path d="M12 44q16 13 32 0-2 12-16 12T12 44Z" fill="hsl(var(--chip-orange))" opacity="0.18" />
+    <circle cx="42" cy="26" r="13" fill="hsl(var(--chip-yellow))" />
+    <path d="M53 23l9-2q1 4-2 7l-7-1Z" fill="hsl(var(--chip-orange))" />
+    <circle cx="45" cy="24" r="2.4" fill="#23170c" />
+    <circle cx="45.8" cy="23.2" r="0.7" fill="#fff" />
+  </svg>
+);
+
+/* Barcode bar heights — pure decoration, echoes the hero boarding pass. */
+const BARCODE = [5, 9, 4, 11, 6, 10, 3, 8, 5, 12, 4, 7, 9, 5, 11, 6];
 
 const bookingIcons: Record<string, React.ElementType> = {
   hotel: Hotel, restaurant: UtensilsCrossed, attraction: Ticket, cafe: Coffee, transport: MapPin,
@@ -34,14 +59,90 @@ const bookingLabels: Record<string, string> = {
   hotel: "Đặt phòng", restaurant: "Xem quán", attraction: "Mua vé", cafe: "Xem quán", transport: "Đặt xe",
 };
 
+const formatActivityCost = (vnd: number | null | undefined): string => {
+  if (!vnd) return "Miễn phí";
+  return formatVndShort(vnd);
+};
+
+const parseActivityTime = (time: string | null | undefined): string => {
+  if (!time) return "09:00";
+  const parts = time.split(":");
+  return parts.length >= 2 ? `${parts[0]}:${parts[1]}` : time;
+};
+
+const bookingTypeFromActivityType = (type: string | null | undefined): TripItem["bookingType"] => {
+  switch (type) {
+    case "ACCOMMODATION":
+      return "hotel";
+    case "FOOD":
+      return "restaurant";
+    case "TRANSPORT":
+      return "transport";
+    case "ATTRACTION":
+      return "attraction";
+    default:
+      return "attraction";
+  }
+};
+
+const tripItemFromActivity = (activity: ActivityDetail, current: TripItem): TripItem => ({
+  ...current,
+  id: String(activity.id),
+  time: parseActivityTime(activity.startTime),
+  title: activity.name,
+  desc: activity.description || "",
+  cost: formatActivityCost(activity.costVnd),
+  costVnd: activity.costVnd ?? 0,
+  image: activity.imageUrl || "/placeholder.svg",
+  address: activity.address || (
+    activity.latitude != null && activity.longitude != null
+      ? `${activity.latitude}, ${activity.longitude}`
+      : undefined
+  ),
+  lat: activity.latitude ?? undefined,
+  lng: activity.longitude ?? undefined,
+  bookingUrl: activity.bookingUrl || undefined,
+  bookingType: bookingTypeFromActivityType(activity.type),
+  placeCacheId: activity.placeCacheId ?? undefined,
+});
+
+const replaceActivityInTripDetail = (detail: TripDetail, activity: ActivityDetail): TripDetail => ({
+  ...detail,
+  days: detail.days.map((day) => ({
+    ...day,
+    activities: day.activities.map((item) =>
+      item.id === activity.id ? { ...item, ...activity } : item
+    ),
+  })),
+});
+
+const applyActivityOverrides = (
+  detail: TripDetail,
+  overrides: Record<string, ActivityDetail>
+): TripDetail => {
+  if (Object.keys(overrides).length === 0) return detail;
+  return {
+    ...detail,
+    days: detail.days.map((day) => ({
+      ...day,
+      activities: day.activities.map((activity) => {
+        const override = overrides[String(activity.id)];
+        return override ? { ...activity, ...override } : activity;
+      }),
+    })),
+  };
+};
+
 const Result = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { state } = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const { user, profile } = useAuth();
   const [swapModal, setSwapModal] = useState<{ open: boolean; item: TripItem | null; dayIdx: number; itemIdx: number }>({ open: false, item: null, dayIdx: 0, itemIdx: 0 });
   const [dbTripId, setDbTripId] = useState<number | null>(null);
   const [trip, setTrip] = useState<TripPlan | null>(null);
+  const [activityOverrides, setActivityOverrides] = useState<Record<string, ActivityDetail>>({});
   const [completedItems, setCompletedItems] = useState<Set<string>>(new Set());
   const [activeDay, setActiveDay] = useState(() => {
     const d = Number(searchParams.get("day"));
@@ -49,6 +150,8 @@ const Result = () => {
   });
   const dayTabsRef = useRef<HTMLDivElement>(null);
   const dayButtonRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const dayListRef = useRef<HTMLDivElement>(null);
   const [isSharedView, setIsSharedView] = useState(false);
   const [saved, setSaved] = useState(false);
   const [routePolylines, setRoutePolylines] = useState<Array<[number, number][]>>([]);
@@ -59,10 +162,9 @@ const Result = () => {
   const sharedToken = searchParams.get("shared");
   const urlTripId = searchParams.get("id");
 
-  const { data: remoteTrip, isLoading: loadingRemote, error: remoteError } = useTripDetail(
-    !sharedToken && !tripFromState ? (urlTripId ? Number(urlTripId) : tripIdFromState) : null
-  );
-  const { data: sharedTrip, isLoading: loadingShared, error: sharedError } = useSharedTrip(sharedToken);
+  const detailTripId = !sharedToken ? (urlTripId ? Number(urlTripId) : (tripIdFromState ?? dbTripId)) : null;
+  const { data: remoteTrip, error: remoteError } = useTripDetail(detailTripId);
+  const { data: sharedTrip, error: sharedError } = useSharedTrip(sharedToken);
   const cloneMutation = useCloneTrip();
   const enableShareMutation = useEnableShare();
   const publishMutation = usePublishTrip();
@@ -115,13 +217,6 @@ const Result = () => {
 
   // Set trip from navigation state or API
   useEffect(() => {
-    if (tripFromState) {
-      setTrip(tripFromState);
-      if (tripIdFromState) setDbTripId(tripIdFromState);
-      setSaved(!!tripIdFromState);
-      return;
-    }
-
     if (sharedTrip) {
       const plan = mapTripDetailToPlan(sharedTrip);
       setTrip(plan);
@@ -132,13 +227,20 @@ const Result = () => {
     }
 
     if (remoteTrip) {
-      const plan = mapTripDetailToPlan(remoteTrip);
+      const plan = mapTripDetailToPlan(applyActivityOverrides(remoteTrip, activityOverrides));
       setTrip(plan);
       setDbTripId(remoteTrip.id);
       setSaved(true);
       return;
     }
-  }, [tripFromState, sharedTrip, remoteTrip, tripIdFromState]);
+
+    if (tripFromState) {
+      setTrip(tripFromState);
+      if (tripIdFromState) setDbTripId(tripIdFromState);
+      setSaved(!!tripIdFromState);
+      return;
+    }
+  }, [tripFromState, sharedTrip, remoteTrip, tripIdFromState, activityOverrides]);
 
   // Hiện tất cả địa điểm của cả hành trình trên map
   const mappableItems = useMemo(
@@ -212,13 +314,7 @@ const Result = () => {
     }
   }, [dbTripId]);
 
-  const packingItems = trip ? generatePackingList(
-    trip.destination, trip.days.length,
-    trip.tags.map(t => {
-      const map: Record<string, string> = { "Chữa lành": "healing", "Ẩm thực": "food", "Sống ảo": "photo", "Mạo hiểm": "adventure" };
-      return map[t] || "";
-    }).filter(Boolean)
-  ) : [];
+  const checklistItems = sharedTrip?.checklist ?? remoteTrip?.checklist ?? [];
 
   const handleSave = async () => {
     if (!user) { toast.error("Vui lòng đăng nhập để lưu lịch trình"); navigate("/auth", { state: { from: "/result" } }); return; }
@@ -326,7 +422,7 @@ const Result = () => {
       if (targetIdx < 0 || targetIdx >= items.length) return prev;
       [items[itemIdx], items[targetIdx]] = [items[targetIdx], items[itemIdx]];
       newDays[dayIdx] = { ...newDays[dayIdx], items };
-      
+
       const newTrip = { ...prev, days: newDays };
 
       if (dbTripId && !isSharedView) {
@@ -343,16 +439,105 @@ const Result = () => {
     });
   };
 
-  const handleSwapItem = (newItem: TripItem) => {
-    const { dayIdx, itemIdx } = swapModal;
-    setTrip(prev => prev ? ({
+  const handleSwapItem = async (response: ReplaceActivityResponse) => {
+    const activity = response.activity;
+    if (!activity) return;
+
+    setActivityOverrides((prev) => ({
       ...prev,
-      days: prev.days.map((day, di) =>
-        di === dayIdx ? { ...day, items: day.items.map((item, ii) => ii === itemIdx ? { ...newItem, id: item.id, time: item.time, image: item.image } : item) } : day
-      ),
-    }) : prev);
+      [String(activity.id)]: activity,
+    }));
+
+    setTrip(prev => {
+      if (!prev) return prev;
+      const days = prev.days.map((day, di) => {
+        if (di !== swapModal.dayIdx) return day;
+        return {
+          ...day,
+          items: day.items.map((current, ii) =>
+            ii === swapModal.itemIdx || current.id === String(activity.id)
+              ? tripItemFromActivity(activity, current)
+              : current
+          ),
+        };
+      });
+      const totalCostVnd = days.reduce(
+        (sum, day) => sum + day.items.reduce((daySum, item) => daySum + (item.costVnd ?? 0), 0),
+        0
+      );
+      return { ...prev, days, totalCost: formatActivityCost(totalCostVnd) };
+    });
+
+    if (dbTripId) {
+      queryClient.setQueryData<TripDetail | undefined>(
+        queryKeys.tripDetail(dbTripId),
+        (current) => current ? replaceActivityInTripDetail(current, activity) : current
+      );
+      queryClient.invalidateQueries({ queryKey: queryKeys.myTrips });
+      queryClient.invalidateQueries({ queryKey: queryKeys.myProfile });
+    }
     toast.success("Đã đổi hoạt động!");
   };
+
+  /* ── page-load entrance + scroll reveals (runs once trip is ready) ── */
+  useGSAP(
+    () => {
+      if (!trip) return;
+      const mm = gsap.matchMedia();
+      mm.add(
+        { motion: "(prefers-reduced-motion: no-preference)", reduce: "(prefers-reduced-motion: reduce)" },
+        (ctx) => {
+          // Reduced-motion users get the page in its final, visible state.
+          if (!(ctx.conditions as { motion: boolean }).motion) return;
+
+          const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
+          tl.from(".bp-stub", { opacity: 0, y: 10, duration: 0.45 }, 0)
+            .from(".bp-meta", { opacity: 0, y: 14, stagger: 0.06, duration: 0.5 }, 0.18)
+            .from(".bp-barcode", { opacity: 0, duration: 0.5 }, 0.3)
+            .from(".bp-barcode span", { scaleY: 0, transformOrigin: "bottom", stagger: 0.015, duration: 0.3 }, 0.34);
+
+          // Title: masked-line reveal — guarded + reverted so a failure can never strand the H1 hidden.
+          let split: SplitText | null = null;
+          try {
+            split = SplitText.create(".bp-title", { type: "lines", mask: "lines", linesClass: "leading-[1.18] pb-[0.08em]" });
+            tl.from(split.lines, { yPercent: 120, duration: 0.8, stagger: 0.12, clearProps: "transform" }, 0.12);
+          } catch {
+            /* SplitText unavailable — leave the title in its natural, visible state. */
+          }
+
+          gsap.utils.toArray<HTMLElement>("[data-reveal]").forEach((el) => {
+            gsap.from(el, {
+              opacity: 0, y: 24, duration: 0.6, ease: "power3.out",
+              clearProps: "opacity,transform",
+              scrollTrigger: { trigger: el, start: "top 92%", once: true },
+            });
+          });
+
+          if (document.fonts?.ready) document.fonts.ready.then(() => ScrollTrigger.refresh());
+          return () => { split?.revert(); };
+        }
+      );
+    },
+    { scope: rootRef, dependencies: [!!trip] }
+  );
+
+  /* ── route-spine draws + stops stagger in on each day change ── */
+  useGSAP(
+    () => {
+      if (!trip) return;
+      const mm = gsap.matchMedia();
+      mm.add(
+        { motion: "(prefers-reduced-motion: no-preference)", reduce: "(prefers-reduced-motion: reduce)" },
+        (ctx) => {
+          if (!(ctx.conditions as { motion: boolean }).motion) return;
+          gsap.timeline({ defaults: { ease: "power3.out" } })
+            .fromTo(".route-spine", { scaleY: 0 }, { scaleY: 1, duration: 0.55, ease: "power2.out" }, 0)
+            .from(".stop", { opacity: 0, x: 16, stagger: 0.07, duration: 0.4 }, 0.1);
+        }
+      );
+    },
+    { scope: dayListRef, dependencies: [activeDay, !!trip], revertOnUpdate: true }
+  );
 
   const loadError = remoteError || sharedError;
   if (loadError && !trip) {
@@ -362,11 +547,11 @@ const Result = () => {
       : status === 404 ? "Không tìm thấy lịch trình"
       : (loadError as any)?.response?.data?.message || "Đã có lỗi xảy ra khi tải lịch trình";
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-paper">
         <Navbar />
         <div className="flex flex-col items-center justify-center pt-40 gap-4 px-6 text-center">
           <div className="text-5xl">{status === 403 ? "🔒" : status === 404 ? "🔍" : "⚠️"}</div>
-          <h2 className="text-xl font-bold text-foreground">{message}</h2>
+          <h2 className="text-xl font-display font-bold text-foreground">{message}</h2>
           <p className="text-muted-foreground max-w-sm">
             Lịch trình này có thể thuộc về người khác hoặc đã bị xóa.
           </p>
@@ -379,39 +564,45 @@ const Result = () => {
     );
   }
 
-  if (loadingRemote || loadingShared || !trip) {
+  if (!trip) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-paper">
         <Navbar />
         <div className="flex flex-col items-center justify-center pt-40 gap-4">
           <Loader2 className="w-8 h-8 animate-spin text-chip-orange" />
-          <p className="text-muted-foreground">Đang tải lịch trình...</p>
+          <p className="font-mono text-xs tracking-[0.18em] uppercase text-muted-foreground">Đang dựng lịch trình…</p>
         </div>
       </div>
     );
   }
 
+  const numDays = trip.days.length;
+  const totalCostVnd = trip.days.reduce(
+    (s, day) => s + day.items.reduce((ds, item) => ds + (item.costVnd ?? 0), 0), 0);
+  const departDate = trip.days[0]?.date || trip.dateRange?.split(" - ")[0] || "—";
+  const tripCode = dbTripId ? `CT-${String(dbTripId).padStart(4, "0")}` : "CT-NEW";
+
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div ref={rootRef} className="min-h-screen bg-paper pb-28">
       <Navbar />
       <div className="pt-20 pb-12">
         {!isSharedView && tripStatus === "ONGOING" && (
-          <div className="container mx-auto px-6 mb-4">
-            <div className="rounded-2xl bg-green-500/10 border border-green-500/30 px-5 py-3 flex items-center gap-3">
-              <span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse flex-shrink-0" />
+          <div className="container mx-auto px-5 sm:px-6 mb-4">
+            <div className="rounded-2xl bg-green-500/10 border border-dashed border-green-500/40 px-5 py-3 flex items-center gap-3">
+              <span className="w-2.5 h-2.5 rounded-full bg-success motion-safe:animate-pulse flex-shrink-0" />
               <div className="flex-1">
-                <p className="font-semibold text-foreground text-sm">Chuyến đi đang diễn ra 🎒</p>
-                <p className="text-xs text-muted-foreground">Đang mở lịch trình hôm nay — tick "Đã đi ✓" khi hoàn thành mỗi hoạt động</p>
+                <p className="font-display font-semibold text-foreground text-sm">Chuyến đi đang diễn ra 🎒</p>
+                <p className="text-xs text-muted-foreground">Đang mở lịch trình hôm nay — chạm vào chấm tròn để đóng dấu “đã đi ✓” mỗi hoạt động.</p>
               </div>
             </div>
           </div>
         )}
         {isSharedView && (
-          <div className="container mx-auto px-6 mb-4">
-            <div className="rounded-2xl bg-chip-yellow-light border border-chip-yellow/30 px-5 py-3 flex items-center gap-3">
+          <div className="container mx-auto px-5 sm:px-6 mb-4">
+            <div className="rounded-2xl bg-chip-yellow-light border border-dashed border-chip-yellow/40 px-5 py-3 flex items-center gap-3">
               <span className="text-lg">👀</span>
               <div className="flex-1">
-                <p className="font-semibold text-foreground text-sm">Bạn đang xem lịch trình được chia sẻ</p>
+                <p className="font-display font-semibold text-foreground text-sm">Bạn đang xem lịch trình được chia sẻ</p>
                 <p className="text-xs text-muted-foreground">Lịch trình này ở chế độ chỉ xem</p>
               </div>
               <Button variant="hero" size="sm" onClick={() => handleClone()}>
@@ -420,89 +611,143 @@ const Result = () => {
             </div>
           </div>
         )}
-        <div className="container mx-auto px-6">
-          <div className="grid lg:grid-cols-5 gap-8">
-            {/* Left - Map */}
-            <div className="lg:col-span-2">
+        <div className="container mx-auto px-5 sm:px-6">
+          <div className="grid lg:grid-cols-5 gap-6 lg:gap-8">
+            {/* ── Left: map + costs + add-ons (after the itinerary on mobile) ── */}
+            <div className="lg:col-span-2 order-2 lg:order-1">
               <div className="sticky top-24 space-y-4">
-                <div className="rounded-2xl overflow-hidden border border-border bg-card shadow-card h-[50vh]">
-                  <GoongMap
-                    pins={mapPins}
-                    routes={routePolylines}
-                    className="w-full h-full"
-                    onPinClick={(idx) => handleItemClick(mappableItems[idx])}
-                  />
+                <div data-reveal className="rounded-2xl overflow-hidden border border-border bg-card shadow-ticket">
+                  <div className="flex items-center justify-between px-4 py-2.5 border-b border-dashed border-border">
+                    <span className="font-mono text-[11px] font-bold tracking-[0.18em] uppercase text-chip-teal-ink flex items-center gap-1.5">
+                      <MapPin className="w-3.5 h-3.5" /> Bản đồ hành trình
+                    </span>
+                    <span className="font-data text-[11px] text-muted-foreground">{mapPins.length} điểm</span>
+                  </div>
+                  <div className="h-[46vh]">
+                    <GoongMap
+                      pins={mapPins}
+                      routes={routePolylines}
+                      className="w-full h-full"
+                      onPinClick={(idx) => handleItemClick(mappableItems[idx])}
+                    />
+                  </div>
                 </div>
 
-                <div className="rounded-2xl border border-border bg-card shadow-card p-5 space-y-3">
-                  <h3 className="font-display font-bold text-foreground flex items-center gap-2">
-                    <Wallet className="w-4 h-4 text-chip-orange" /> Dự toán chi phí
-                  </h3>
+                <div data-reveal className="rounded-2xl border border-border bg-card shadow-card p-5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-mono text-[11px] font-bold tracking-[0.18em] uppercase text-chip-teal-ink flex items-center gap-1.5">
+                      <Wallet className="w-3.5 h-3.5" /> Dự toán chi phí
+                    </h3>
+                    <span className="font-data text-[11px] text-muted-foreground">VNĐ</span>
+                  </div>
                   {/* Single source of truth: item.costVnd (số thô từ backend) — tự cập nhật khi xóa/đổi activity */}
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     {trip.days.map(day => {
                       const dayCost = day.items.reduce((sum, item) => sum + (item.costVnd ?? 0), 0);
                       return (
                         <div key={day.day} className="flex items-center justify-between text-sm">
                           <span className="text-muted-foreground">{day.day}</span>
-                          <span className="font-semibold text-foreground">{dayCost > 0 ? formatVndShort(dayCost) : "Miễn phí"}</span>
+                          <span className="font-data font-bold text-foreground">{dayCost > 0 ? formatVndShort(dayCost) : "Miễn phí"}</span>
                         </div>
                       );
                     })}
                   </div>
-                  {(() => {
-                    const total = trip.days.reduce(
-                      (s, day) => s + day.items.reduce((ds, item) => ds + (item.costVnd ?? 0), 0), 0);
-                    return (
-                      <div className="border-t border-border pt-3 flex items-center justify-between">
-                        <span className="font-semibold text-foreground">Tổng ước tính</span>
-                        <span className="text-lg font-bold text-gradient">{formatVndShort(total)} VNĐ</span>
-                      </div>
-                    );
-                  })()}
+                  <div className="border-t border-dashed border-border pt-3 flex items-baseline justify-between">
+                    <span className="font-display font-semibold text-foreground">Tổng ước tính</span>
+                    <span className="font-data text-xl font-bold text-chip-orange-ink">{formatVndShort(totalCostVnd)}</span>
+                  </div>
                 </div>
 
-                <div className="rounded-2xl border border-chip-yellow/30 bg-gradient-warm p-5 space-y-3">
+                {!isSharedView && dbTripId && <div data-reveal><FlightCard tripId={dbTripId} /></div>}
+
+                <div data-reveal>
+                  <WeatherWidget destination={trip.destination} dates={trip.days.map(d => d.date).filter(Boolean)} />
+                </div>
+
+                {/* Upsell — kept quiet and last so utility (cost / flight / weather) outranks it. */}
+                <div data-reveal className="rounded-2xl border border-border bg-card shadow-card p-5 space-y-3">
                   <div className="flex items-center gap-3">
                     <span className="text-2xl">🛡️</span>
                     <div>
-                      <p className="font-semibold text-foreground text-sm">Bảo hiểm du lịch</p>
-                      <p className="text-xs text-muted-foreground">Bảo vệ chuyến đi từ 49K/ngày</p>
+                      <p className="font-display font-semibold text-foreground text-sm">Bảo hiểm du lịch</p>
+                      <p className="text-xs text-muted-foreground">Bảo vệ chuyến đi từ <span className="font-data">49K</span>/ngày</p>
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="hero" size="sm" className="flex-1 text-xs">Mua bảo hiểm</Button>
+                    <Button variant="soft" size="sm" className="flex-1 text-xs">Mua bảo hiểm</Button>
                     <Button variant="ghost" size="sm" className="text-xs">Tìm hiểu</Button>
                   </div>
                 </div>
-
-                {!isSharedView && dbTripId && <FlightCard tripId={dbTripId} />}
-
-                <WeatherWidget destination={trip.destination} dates={trip.days.map(d => d.date).filter(Boolean)} />
               </div>
             </div>
 
-            {/* Right - Timeline + Tabs */}
-            <div className="lg:col-span-3 space-y-6">
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-card rounded-2xl p-6 border border-border shadow-card">
-                <div className="flex items-start justify-between flex-wrap gap-4">
-                  <div>
-                    <h1 className="text-2xl font-bold text-foreground">{trip.title} 🏖️</h1>
-                    <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground flex-wrap">
-                      <span className="flex items-center gap-1"><Clock className="w-4 h-4" /> {trip.duration}</span>
-                      <span className="flex items-center gap-1"><Wallet className="w-4 h-4" /> {trip.totalCost} VNĐ</span>
-                      <span className="flex items-center gap-1"><Star className="w-4 h-4 text-chip-yellow" /> {trip.rating}</span>
-                    </div>
+            {/* ── Right: boarding-pass header + itinerary (first on mobile) ── */}
+            <div className="lg:col-span-3 space-y-6 order-1 lg:order-2">
+              {/* Boarding pass — the deliverable, made real */}
+              <header className="relative overflow-hidden rounded-[1.6rem] border border-border bg-card shadow-ticket">
+                <div aria-hidden className="absolute inset-0 pointer-events-none" style={{
+                  background: "radial-gradient(60% 80% at 92% 0%, hsl(var(--chip-yellow) / 0.22), transparent 60%), radial-gradient(50% 70% at 2% 100%, hsl(var(--chip-teal) / 0.12), transparent 60%)",
+                }} />
+                <div className="relative p-5 sm:p-7">
+                  <div className="bp-stub flex items-center justify-between font-mono text-[11px] font-bold tracking-[0.18em] uppercase text-muted-foreground">
+                    <span className="flex items-center gap-1.5 text-chip-teal-ink"><ChipDuck className="w-4 h-4" /> Chip Trip</span>
+                    <span>Hành trình · Itinerary</span>
                   </div>
-                  {/* Minimal header actions - main actions in floating bar */}
-                  {!isSharedView && (
-                    <div className="flex gap-2 flex-wrap">
-                      {dbTripId && <GroupPanel tripId={dbTripId} isOwner={true} />}
-                      {dbTripId && <SplitBill tripId={dbTripId} memberNames={user ? { [user.id]: profile?.fullName || user.email?.split("@")[0] || "Bạn" } : {}} travelerCount={trip?.days?.[0]?.items ? undefined : 2} />}
+
+                  <div className="mt-5 flex items-start justify-between gap-4 flex-wrap">
+                    <div className="min-w-0">
+                      <p className="bp-meta font-mono text-[11px] text-muted-foreground tracking-wide">ĐIỂM ĐẾN</p>
+                      <h1 className="bp-title font-display text-3xl sm:text-[2.6rem] font-bold leading-[1.12] tracking-tight text-foreground mt-1">
+                        {trip.title}
+                      </h1>
                     </div>
-                  )}
+                    {!isSharedView && (
+                      <div className="flex gap-2 flex-wrap shrink-0">
+                        {dbTripId && <GroupPanel tripId={dbTripId} isOwner={true} />}
+                        {dbTripId && <SplitBill tripId={dbTripId} memberNames={user ? { [user.id]: profile?.fullName || user.email?.split("@")[0] || "Bạn" } : {}} travelerCount={trip?.days?.[0]?.items ? undefined : 2} />}
+                      </div>
+                    )}
+                  </div>
+
+                  <dl className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-4 border-t border-dashed border-border pt-5">
+                    <div className="bp-meta">
+                      <dt className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1"><Clock className="w-3 h-3" /> Thời lượng</dt>
+                      <dd className="font-data text-base sm:text-lg font-bold text-foreground mt-1">{numDays} ngày</dd>
+                    </div>
+                    <div className="bp-meta">
+                      <dt className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1"><Plane className="w-3 h-3" /> Khởi hành</dt>
+                      <dd className="font-data text-base sm:text-lg font-bold text-foreground mt-1">{departDate}</dd>
+                    </div>
+                    <div className="bp-meta">
+                      <dt className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1"><Wallet className="w-3 h-3" /> Chi phí</dt>
+                      <dd className="font-data text-base sm:text-lg font-bold text-chip-orange-ink mt-1">{totalCostVnd > 0 ? formatVndShort(totalCostVnd) : trip.totalCost}</dd>
+                    </div>
+                    <div className="bp-meta">
+                      <dt className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1"><Star className="w-3 h-3" /> Đánh giá</dt>
+                      <dd className="font-data text-base sm:text-lg font-bold text-foreground mt-1 flex items-center gap-1">
+                        {trip.rating}<Star className="w-3.5 h-3.5 fill-chip-yellow text-chip-yellow" />
+                      </dd>
+                    </div>
+                  </dl>
                 </div>
-              </motion.div>
+
+                {/* perforation */}
+                <div className="relative h-5 ticket-perf border-y border-dashed border-border bg-card">
+                  <span className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-paper" />
+                  <span className="absolute -right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-paper" />
+                </div>
+
+                <div className="relative flex items-center justify-between px-5 sm:px-7 py-4">
+                  <div className="font-mono text-[11px] text-muted-foreground tracking-wide">
+                    MÃ CHUYẾN · <span className="text-foreground font-bold font-data">{tripCode}</span>
+                  </div>
+                  <div className="bp-barcode flex items-end gap-[3px] h-6" aria-hidden="true">
+                    {BARCODE.map((h, i) => (
+                      <span key={i} className="w-[3px] bg-foreground/80" style={{ height: h * 2 }} />
+                    ))}
+                  </div>
+                </div>
+              </header>
 
               <Tabs defaultValue="itinerary" className="w-full">
                 <TabsList className="w-full grid grid-cols-2">
@@ -511,39 +756,47 @@ const Result = () => {
                 </TabsList>
 
                 <TabsContent value="itinerary" className="space-y-4 mt-4">
-                  {/* Horizontal day tabs */}
-                  <div ref={dayTabsRef} className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
+                  {/* Day legs */}
+                  <div ref={dayTabsRef} className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
                     {trip.days.map((day, dayIdx) => {
                       const completedCount = day.items.filter((_, idx) => completedItems.has(`${dayIdx}-${idx}`)).length;
                       const allDone = completedCount === day.items.length && day.items.length > 0;
+                      const active = activeDay === dayIdx;
                       return (
                         <button
                           key={dayIdx}
                           ref={(el) => { dayButtonRefs.current[dayIdx] = el; }}
                           onClick={() => handleDayClick(dayIdx)}
-                          className={`flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 transition-all text-sm font-medium ${
-                            activeDay === dayIdx
-                              ? "border-chip-orange bg-chip-orange/10 text-chip-orange shadow-warm"
-                              : "border-border bg-card text-muted-foreground hover:border-chip-orange/40"
+                          aria-pressed={active}
+                          className={`flex-shrink-0 flex items-center gap-2.5 pl-2 pr-3.5 py-2 rounded-xl border-2 transition-all ${
+                            active
+                              ? "border-chip-orange bg-chip-orange/10 shadow-warm"
+                              : "border-border bg-card hover:border-chip-teal/50"
                           }`}
                         >
-                          <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${activeDay === dayIdx ? "bg-chip-orange text-white" : "bg-muted text-muted-foreground"}`}>
-                            {day.day}
+                          <span className={`grid place-items-center w-8 h-8 rounded-lg font-data text-sm font-bold ${active ? "bg-chip-orange text-white" : "bg-muted text-muted-foreground"}`}>
+                            {dayIdx + 1}
                           </span>
-                          <span className="hidden sm:inline">{day.date}</span>
-                          {allDone && <Check className="w-3.5 h-3.5 text-green-500" />}
-                          {!allDone && completedCount > 0 && (
-                            <span className="text-[10px] text-muted-foreground">{completedCount}/{day.items.length}</span>
-                          )}
+                          <span className="text-left leading-tight">
+                            <span className={`block text-[13px] font-display font-semibold ${active ? "text-chip-orange-ink" : "text-foreground"}`}>{day.day}</span>
+                            {day.date && <span className="hidden sm:block font-data text-[10px] text-muted-foreground">{day.date}</span>}
+                          </span>
+                          {allDone ? (
+                            <Check className="w-4 h-4 text-success" />
+                          ) : completedCount > 0 ? (
+                            <span className="font-data text-[10px] text-muted-foreground">{completedCount}/{day.items.length}</span>
+                          ) : null}
                         </button>
                       );
                     })}
                   </div>
 
-                  {/* Active day items */}
+                  {/* Active day route */}
                   {trip.days[activeDay] && (
-                    <motion.div key={activeDay} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.2 }} className="space-y-3">
-                      <div className="space-y-3 pl-4 border-l-2 border-chip-orange/20 ml-4">
+                    <div ref={dayListRef} className="relative pt-1">
+                      {/* the route ink threading the day's stops */}
+                      <div className="route-spine pointer-events-none absolute top-3 bottom-6 left-7 -translate-x-1/2 w-[2px] rounded-full" aria-hidden="true" />
+                      <ol key={activeDay} className="space-y-2.5">
                         {trip.days[activeDay].items.map((item, idx) => {
                           // Chuyến bay: TRANSPORT có tên/desc chỉ chuyến bay → trỏ tới card vé máy bay thay vì "Đặt xe trên Grab"
                           const isFlight = item.bookingType === "transport"
@@ -560,89 +813,120 @@ const Result = () => {
                           }
                           const isCompleted = completedItems.has(`${activeDay}-${idx}`);
                           const travel = travelTimes[`${activeDay}-${idx}`];
+                          const nodeColor = isCompleted ? "bg-green-500" : idx === 0 ? "bg-chip-orange" : "bg-chip-teal";
+                          const isLast = idx === trip.days[activeDay].items.length - 1;
 
                           return (
-                            <div key={idx}>
-                            <div
-                              onClick={() => handleItemClick(item)}
-                              className={`relative flex gap-4 bg-card rounded-xl p-4 border border-border shadow-card hover:shadow-warm transition-all ml-4 cursor-pointer hover:-translate-y-0.5 group/item ${isCompleted ? "opacity-60" : ""}`}
-                            >
-                              <div className={`absolute -left-[1.6rem] top-5 w-3 h-3 rounded-full border-2 border-background ${isCompleted ? "bg-green-500" : "bg-chip-orange"}`} />
-
-                              {/* Completion checkbox */}
-                              <button
-                                onClick={(e) => toggleCompleted(activeDay, idx, e)}
-                                className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center flex-shrink-0 transition-all ${
-                                  isCompleted
-                                    ? "border-green-500 bg-green-500 text-white"
-                                    : "border-border hover:border-chip-orange"
-                                }`}
-                              >
-                                {isCompleted && <Check className="w-3.5 h-3.5" />}
-                              </button>
-
-
-                              <img src={item.image && item.image !== "/placeholder.svg" ? item.image : getPlaceImage(item.title, item.bookingType)} alt={item.title} className={`w-16 h-16 rounded-xl object-cover flex-shrink-0 ${isCompleted ? "grayscale" : ""}`} />
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-xs font-semibold text-chip-orange">{item.time}</span>
-                                  {isCompleted && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 font-medium">Đã đi ✓</span>}
-                                </div>
-                                <h4 className={`font-semibold text-foreground truncate ${isCompleted ? "line-through" : ""}`}>{item.title}</h4>
-                                <p className="text-sm text-muted-foreground">{item.desc}</p>
-                                <div className="flex items-center gap-2 mt-2 flex-wrap">
+                            <li key={idx} className="stop">
+                              <div className="flex gap-3 sm:gap-4">
+                                {/* rail: time + the route node (tap = stamp "đã đi"); 44px hit area */}
+                                <div className="relative w-14 shrink-0 flex flex-col items-center pt-1.5">
+                                  <span className="font-data text-[13px] font-bold text-chip-teal-ink leading-none">{item.time}</span>
                                   <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      if (isFlight && !isSharedView) {
-                                        document.getElementById("flight-card")?.scrollIntoView({ behavior: "smooth", block: "center" });
-                                      } else {
-                                        handleBooking(e, item);
-                                      }
-                                    }}
-                                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-chip-yellow-light hover:bg-chip-orange/10 border border-chip-yellow/30 text-xs font-semibold text-chip-orange transition-all hover:shadow-warm"
+                                    onClick={(e) => toggleCompleted(activeDay, idx, e)}
+                                    title={isCompleted ? "Bỏ dấu đã đi" : "Đóng dấu đã đi"}
+                                    aria-label={isCompleted ? "Bỏ dấu đã đi" : "Đóng dấu đã đi"}
+                                    aria-pressed={isCompleted}
+                                    className="relative z-10 mt-1 grid place-items-center w-11 h-11 rounded-full group/node focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-chip-orange/40"
                                   >
-                                    <BookingIcon className="w-3 h-3" /> {bookingLabel} {!isFlight && <ExternalLink className="w-3 h-3" />}
+                                    <span className={`grid place-items-center w-4 h-4 rounded-full border-2 border-card ring-2 ring-paper transition-colors ${nodeColor} ${!isCompleted ? "group-hover/node:ring-chip-orange/40" : ""}`}>
+                                      {isCompleted && <Check className="w-2.5 h-2.5 text-white" />}
+                                    </span>
                                   </button>
-                                  <button onClick={(e) => { e.stopPropagation(); setSwapModal({ open: true, item, dayIdx: activeDay, itemIdx: idx }); }} className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-muted hover:bg-chip-orange/10 border border-border text-xs font-medium text-muted-foreground hover:text-chip-orange transition-all" title="Đổi">
-                                    <RefreshCw className="w-3 h-3" /> Đổi
+                                </div>
+
+                                {/* journal entry card — content is one keyboard-reachable nav button; edits sit outside it */}
+                                <div className={`group/item flex-1 min-w-0 rounded-2xl bg-card border border-border p-3 sm:p-4 shadow-card hover:shadow-warm hover:-translate-y-0.5 hover:border-chip-orange/30 transition-all ${isCompleted ? "opacity-60" : ""}`}>
+                                  <button
+                                    onClick={() => handleItemClick(item)}
+                                    className="w-full flex gap-3 sm:gap-4 text-left rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-chip-orange/50"
+                                  >
+                                    <SafeImage
+                                      src={item.image && item.image !== "/placeholder.svg" ? item.image : getPlaceImage(item.title, item.bookingType)}
+                                      fallbackSrc={getPlaceImage(item.title, item.bookingType)}
+                                      alt={item.title}
+                                      className={`w-16 h-16 sm:w-20 sm:h-20 rounded-xl object-cover flex-shrink-0 ${isCompleted ? "grayscale" : ""}`}
+                                    />
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-start justify-between gap-2">
+                                        <h4 className={`font-display font-bold text-foreground leading-snug group-hover/item:text-chip-orange-ink transition-colors ${isCompleted ? "line-through" : ""} line-clamp-2`}>{item.title}</h4>
+                                        <span className="font-data text-sm font-bold text-foreground whitespace-nowrap shrink-0">{item.cost}</span>
+                                      </div>
+                                      <p className="text-sm text-muted-foreground line-clamp-1 mt-0.5">{item.desc}</p>
+                                      {isCompleted && (
+                                        <span className="inline-block mt-1.5 text-[10px] px-1.5 py-0.5 rounded-full bg-success/15 text-success font-semibold">Đã đi ✓</span>
+                                      )}
+                                    </div>
                                   </button>
-                                  <button onClick={(e) => { e.stopPropagation(); handleDeleteItem(activeDay, idx); }} className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-muted hover:bg-destructive/10 border border-border text-xs font-medium text-muted-foreground hover:text-destructive transition-all" title="Xóa">
-                                    <Trash2 className="w-3 h-3" /> Xóa
-                                  </button>
-                                  <div className="flex items-center gap-0.5">
-                                    <button onClick={(e) => { e.stopPropagation(); handleMoveItem(activeDay, idx, "up"); }} disabled={idx === 0} className="inline-flex items-center px-1.5 py-1 rounded-lg bg-muted hover:bg-chip-orange/10 border border-border text-xs text-muted-foreground hover:text-chip-orange disabled:opacity-30 transition-all" title="Lên">
-                                      <ArrowUp className="w-3 h-3" />
+                                  <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
+                                    <button
+                                      onClick={(e) => {
+                                        if (isFlight && !isSharedView) {
+                                          document.getElementById("flight-card")?.scrollIntoView({ behavior: "smooth", block: "center" });
+                                        } else {
+                                          handleBooking(e, item);
+                                        }
+                                      }}
+                                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-chip-yellow-light hover:bg-chip-orange/10 border border-chip-yellow/40 text-[11px] font-semibold text-chip-orange-ink transition-all"
+                                    >
+                                      <BookingIcon className="w-3 h-3 shrink-0" /> <span className="truncate max-w-[8rem]">{bookingLabel}</span> {!isFlight && <ExternalLink className="w-3 h-3 shrink-0" />}
                                     </button>
-                                    <button onClick={(e) => { e.stopPropagation(); handleMoveItem(activeDay, idx, "down"); }} disabled={idx === trip.days[activeDay].items.length - 1} className="inline-flex items-center px-1.5 py-1 rounded-lg bg-muted hover:bg-chip-orange/10 border border-border text-xs text-muted-foreground hover:text-chip-orange disabled:opacity-30 transition-all" title="Xuống">
-                                      <ArrowDown className="w-3 h-3" />
+                                    <button
+                                      onClick={() => setSwapModal({ open: true, item, dayIdx: activeDay, itemIdx: idx })}
+                                      disabled={isSharedView || !dbTripId || !remoteTrip}
+                                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-muted hover:bg-chip-teal/10 border border-border text-[11px] font-medium text-muted-foreground hover:text-chip-teal-ink transition-all disabled:opacity-40 disabled:hover:text-muted-foreground disabled:hover:bg-muted"
+                                      title={isSharedView ? "Không thể đổi trong chế độ xem chia sẻ" : "Đổi"}
+                                    >
+                                      <RefreshCw className="w-3 h-3" /> Đổi
                                     </button>
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                        <button
+                                          className="ml-auto inline-flex items-center justify-center w-8 h-8 rounded-lg bg-muted hover:bg-chip-teal/10 border border-border text-muted-foreground hover:text-chip-teal-ink transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-chip-orange/40"
+                                          aria-label="Thao tác khác"
+                                        >
+                                          <MoreHorizontal className="w-4 h-4" />
+                                        </button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end" className="w-44">
+                                        <DropdownMenuItem onClick={() => handleMoveItem(activeDay, idx, "up")} disabled={idx === 0} className="gap-2">
+                                          <ArrowUp className="w-4 h-4" /> Chuyển lên
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => handleMoveItem(activeDay, idx, "down")} disabled={isLast} className="gap-2">
+                                          <ArrowDown className="w-4 h-4" /> Chuyển xuống
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => handleDeleteItem(activeDay, idx)} disabled={isSharedView} className="gap-2 text-destructive focus:text-destructive">
+                                          <Trash2 className="w-4 h-4" /> Xóa hoạt động
+                                        </DropdownMenuItem>
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
                                   </div>
                                 </div>
                               </div>
-                              <div className="text-right flex-shrink-0">
-                                <span className="text-sm font-bold text-foreground">{item.cost}</span>
-                              </div>
-                            </div>
-                            {travel && idx < trip.days[activeDay].items.length - 1 && (
-                              <div className="flex items-center gap-2 ml-8 my-1">
-                                <div className="flex-1 border-t border-dashed border-border/50" />
-                                <span className="text-xs text-muted-foreground whitespace-nowrap">
-                                  🚗 ~{formatDuration(travel.duration)} · {formatDistance(travel.distance)}
-                                </span>
-                                <div className="flex-1 border-t border-dashed border-border/50" />
-                              </div>
-                            )}
-                            </div>
+
+                              {/* travel time between stops — a dashed leg of the route */}
+                              {travel && !isLast && (
+                                <div className="flex items-center gap-2 pl-14 py-1.5">
+                                  <span className="font-data text-[11px] text-chip-teal-ink whitespace-nowrap flex items-center gap-1.5">
+                                    🚗 ~{formatDuration(travel.duration)} · {formatDistance(travel.distance)}
+                                  </span>
+                                  <span className="flex-1 border-t border-dashed border-chip-teal/30" />
+                                </div>
+                              )}
+                            </li>
                           );
                         })}
-                      </div>
-                    </motion.div>
+                      </ol>
+                    </div>
                   )}
                 </TabsContent>
 
                 <TabsContent value="packing" className="mt-4">
-                  <PackingList items={packingItems} />
+                  <PackingList
+                    tripId={dbTripId}
+                    items={checklistItems}
+                    readOnly={isSharedView || !dbTripId}
+                  />
                 </TabsContent>
               </Tabs>
             </div>
@@ -651,7 +935,7 @@ const Result = () => {
       </div>
 
       {/* Floating Action Bar */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 bg-card/80 backdrop-blur-lg border-t border-border">
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-paper/85 backdrop-blur-lg border-t border-dashed border-border">
         <div className="container mx-auto px-4 sm:px-6 py-3 flex items-center justify-start sm:justify-center gap-2 sm:gap-3 overflow-x-auto scrollbar-hide">
           {isSharedView ? (
             <>
@@ -699,12 +983,12 @@ const Result = () => {
         storageKey={`chip-result-${dbTripId || "new"}`}
         countdown={trip.days[0]?.date ? { label: "Còn lại trước chuyến đi", targetDate: trip.days[0].date } : undefined}
         messages={[
-          { 
-            text: saved 
+          {
+            text: saved
               ? `Lịch trình "${trip.destination}" đã lưu! Bấm bên dưới để xem lại bất cứ lúc nào 🐤`
               : "Lịch trình xịn quá! Lưu lại để không mất nha 🐤",
             delay: 1500,
-            action: saved 
+            action: saved
               ? { label: "Xem chuyến đi đã lưu", onClick: () => navigate("/saved") }
               : { label: "Lưu ngay", onClick: handleSave }
           },
@@ -717,7 +1001,11 @@ const Result = () => {
         open={swapModal.open}
         onClose={() => setSwapModal(prev => ({ ...prev, open: false }))}
         item={swapModal.item}
-        onSelect={handleSwapItem}
+        previousItem={trip?.days?.[swapModal.dayIdx]?.items?.[swapModal.itemIdx - 1] ?? null}
+        tripId={dbTripId}
+        dayId={remoteTrip?.days?.[swapModal.dayIdx]?.id ?? null}
+        activityId={swapModal.item ? Number(swapModal.item.id) : null}
+        onApplied={handleSwapItem}
       />
     </div>
   );

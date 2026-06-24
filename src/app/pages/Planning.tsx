@@ -22,6 +22,8 @@ const travelStyles = [
   { id: "healing", label: "Nghỉ dưỡng", emoji: "🧘", desc: "Thư giãn, yoga, spa", popular: true },
   { id: "food", label: "Food Tour", emoji: "🍜", desc: "Ăn sập phố, local food", popular: true },
   { id: "photo", label: "Check-in sống ảo", emoji: "📸", desc: "Điểm chụp đẹp, trending", popular: true },
+  { id: "beach", label: "Đi biển", emoji: "🏖️", desc: "Tắm biển, đảo, lặn ngắm san hô", popular: true },
+  { id: "mountain", label: "Đi núi", emoji: "⛰️", desc: "Trekking, săn mây, cắm trại" },
   { id: "adventure", label: "Mạo hiểm", emoji: "🏔️", desc: "Leo núi, lặn biển, trekking" },
   { id: "resort", label: "Resort & Chill", emoji: "🏖️", desc: "Pool, view biển, all-inclusive", popular: true },
   { id: "family", label: "Gia đình", emoji: "👨‍👩‍👧‍👦", desc: "An toàn, vui chơi, trẻ em" },
@@ -266,6 +268,11 @@ const Planning = () => {
       });
 
       trackEvent("generate_succeeded", { ...analyticsPayload, tripId: data.id });
+      if (data.geocodeFailedCount && data.geocodeFailedCount > 0) {
+        toast.info(`${data.geocodeFailedCount} hoạt động chưa định vị được trên bản đồ`, {
+          description: "Lịch trình vẫn dùng được; một vài hoạt động có thể chưa hiện trên bản đồ.",
+        });
+      }
       const trip = mapTripDetailToPlan(data);
       trip.days?.forEach((day) => {
         day.items?.forEach((item) => {

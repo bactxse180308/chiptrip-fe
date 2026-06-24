@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Be+Vietnam+Pro:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Be+Vietnam+Pro:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -22,13 +22,17 @@
     --secondary-foreground: 25 20% 20%;
 
     --muted: 40 20% 94%;
-    --muted-foreground: 25 10% 50%;
+    --muted-foreground: 25 13% 40%;
 
     --accent: 28 100% 54%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
+
+    /* Semantic success — "đã đi / đang diễn ra / đang mở cửa". AA on paper & card. */
+    --success: 142 60% 33%;
+    --success-foreground: 0 0% 100%;
 
     --border: 40 20% 88%;
     --input: 40 20% 88%;
@@ -39,8 +43,14 @@
     --chip-yellow: 45 90% 65%;
     --chip-yellow-light: 45 85% 90%;
     --chip-orange: 28 100% 54%;
+    /* Darker orange for text/icons on light surfaces (AA ≥4.5:1 on paper) */
+    --chip-orange-ink: 22 90% 38%;
     --chip-cream: 40 33% 98%;
     --chip-warm: 25 30% 25%;
+    /* Map-ink teal — the route / map accent (second color of the system) */
+    --chip-teal: 187 82% 28%;
+    --chip-teal-ink: 191 70% 18%;
+    --chip-teal-light: 186 44% 92%;
     --on-image-text: 0 0% 100%;
     --on-image-text-muted: 0 0% 100%;
 
@@ -71,6 +81,8 @@
     --accent-foreground: 0 0% 100%;
     --destructive: 0 62% 30%;
     --destructive-foreground: 0 0% 100%;
+    --success: 142 50% 52%;
+    --success-foreground: 0 0% 100%;
     --border: 25 12% 22%;
     --input: 25 12% 22%;
     --ring: 28 100% 54%;
@@ -85,6 +97,10 @@
     --chip-yellow-light: 35 40% 20%;
     --chip-cream: 25 18% 12%;
     --chip-warm: 40 30% 85%;
+    --chip-orange-ink: 28 100% 62%;
+    --chip-teal: 186 58% 52%;
+    --chip-teal-ink: 186 50% 72%;
+    --chip-teal-light: 188 40% 18%;
     --on-image-text: 0 0% 100%;
     --on-image-text-muted: 0 0% 100%;
   }
@@ -125,6 +141,104 @@
   .shadow-card {
     box-shadow: 0 2px 16px -2px hsl(25 20% 15% / 0.08);
   }
+
+  /* === Landing: travel-journal direction === */
+
+  /* Warm paper with a faint cartographer's grid — texture with intent, never flat */
+  .bg-paper {
+    background-color: hsl(var(--background));
+    background-image:
+      linear-gradient(hsl(var(--chip-teal) / 0.045) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--chip-teal) / 0.045) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+
+  /* Soft sunrise glow anchored to a corner of the hero */
+  .bg-sun-glow {
+    background:
+      radial-gradient(60% 55% at 85% 8%, hsl(var(--chip-yellow) / 0.30), transparent 60%),
+      radial-gradient(55% 50% at 5% 90%, hsl(var(--chip-teal) / 0.12), transparent 55%);
+  }
+
+  .text-teal-ink {
+    color: hsl(var(--chip-teal-ink));
+  }
+
+  /* Boarding-pass / ticket: notched perforation between stub and body */
+  .ticket-perf {
+    -webkit-mask-image: radial-gradient(circle at center, transparent 8px, #000 8.5px);
+    mask-image: radial-gradient(circle at center, transparent 8px, #000 8.5px);
+  }
+
+  /* Mono "data" face — timestamps, prices, coordinates, codes */
+  .font-data {
+    font-family: "Space Mono", ui-monospace, monospace;
+    font-feature-settings: "tnum" 1;
+  }
+
+  /* Dashed route stroke baseline (DrawSVG animates dashoffset on top) */
+  .route-stroke {
+    stroke: hsl(var(--chip-teal));
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    fill: none;
+  }
+
+  .shadow-ticket {
+    box-shadow:
+      0 1px 0 hsl(25 20% 15% / 0.04),
+      0 18px 40px -16px hsl(28 60% 30% / 0.30),
+      0 4px 12px -6px hsl(187 50% 20% / 0.18);
+  }
+
+  @keyframes marquee-x {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+  .animate-marquee {
+    animation: marquee-x 32s linear infinite;
+  }
+
+  /* Hide scrollbars on horizontal rails (day tabs, thumbnail strips) while
+     keeping them scrollable — these classes were referenced but never defined. */
+  .no-scrollbar,
+  .scrollbar-hide,
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar,
+  .scrollbar-hide::-webkit-scrollbar,
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Itinerary route spine — the teal "map ink" line threading a day's stops.
+     GSAP scales it in (origin top) so the route appears to draw itself. */
+  .route-spine {
+    background: linear-gradient(hsl(var(--chip-teal) / 0.55), hsl(var(--chip-teal) / 0.15));
+    transform-origin: top center;
+  }
+
+  /* Passport-style stamp — rotated, hollow, ink-on-paper. Decorative only. */
+  .stamp {
+    border: 2px solid hsl(var(--chip-teal-ink) / 0.5);
+    color: hsl(var(--chip-teal-ink));
+    border-radius: 0.5rem;
+    mix-blend-mode: multiply;
+  }
+  .dark .stamp {
+    mix-blend-mode: screen;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee,
+  .animate-bounce,
+  .animate-float,
+  .animate-pulse-glow {
+    animation: none !important;
+  }
 }
 
 /* Goong map custom marker: chấm tròn + label tên địa điểm bên dưới */
@@ -139,15 +253,15 @@
 .goong-custom-marker .marker-dot {
   width: 12px;
   height: 12px;
-  background: #f97316;
+  background: hsl(var(--chip-orange));
   border-radius: 50%;
   border: 2px solid white;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .goong-custom-marker .marker-label {
-  background: white;
-  color: #1a1a1a;
+  background: hsl(var(--card));
+  color: hsl(var(--card-foreground));
   font-size: 11px;
   font-weight: 600;
   padding: 2px 6px;
@@ -158,9 +272,4 @@
   max-width: 120px;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.dark .goong-custom-marker .marker-label {
-  background: #262626;
-  color: #fafafa;
 }

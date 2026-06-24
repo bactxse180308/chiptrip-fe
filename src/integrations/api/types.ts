@@ -112,6 +112,8 @@ export interface UserProfile {
   fullName: string | null;
   avatarUrl: string | null;
   aiCredits: number;
+  aiCreditUnits?: number;
+  aiCreditBalance?: number;
   createdAt: string;
   role?: string;
   preferences?: string | null;
@@ -161,9 +163,17 @@ export interface DayDetail {
   activities: ActivityDetail[];
 }
 
+export type ChecklistCategory =
+  | "PAPERS"
+  | "CLOTHES"
+  | "HYGIENE"
+  | "ELECTRONICS"
+  | "MEDICINE"
+  | "OTHER";
+
 export interface ChecklistDetail {
   id: number;
-  category: string;
+  category: ChecklistCategory;
   name: string;
   isChecked: boolean;
   displayOrder: number;

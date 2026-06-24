@@ -10,7 +10,10 @@ import { motion, AnimatePresence } from "framer-motion";
 const Navbar = () => {
   const location = useLocation();
   const { user, profile, signOut, isAdmin } = useAuth();
-  const credits = profile?.aiCredits ?? 0;
+  const creditBalance = Number(profile?.aiCreditBalance ?? profile?.aiCredits ?? 0);
+  const credits = Number.isInteger(creditBalance)
+    ? String(creditBalance)
+    : creditBalance.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
   const [dark, setDark] = useState(() => {
     if (typeof window !== "undefined") {
       return document.documentElement.classList.contains("dark");

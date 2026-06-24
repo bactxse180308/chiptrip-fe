@@ -16,6 +16,7 @@ export default {
       fontFamily: {
         display: ["Space Grotesk", "sans-serif"],
         body: ["Be Vietnam Pro", "sans-serif"],
+        mono: ["Space Mono", "ui-monospace", "monospace"],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -34,6 +35,10 @@ export default {
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
+        },
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
         },
         muted: {
           DEFAULT: "hsl(var(--muted))",
@@ -55,8 +60,12 @@ export default {
           yellow: "hsl(var(--chip-yellow))",
           "yellow-light": "hsl(var(--chip-yellow-light))",
           orange: "hsl(var(--chip-orange))",
+          "orange-ink": "hsl(var(--chip-orange-ink))",
           cream: "hsl(var(--chip-cream))",
           warm: "hsl(var(--chip-warm))",
+          teal: "hsl(var(--chip-teal))",
+          "teal-ink": "hsl(var(--chip-teal-ink))",
+          "teal-light": "hsl(var(--chip-teal-light))",
         },
         "on-image": {
           text: "hsl(var(--on-image-text))",

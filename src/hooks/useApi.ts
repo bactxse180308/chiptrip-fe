@@ -1,12 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { tripsApi, userApi, authApi, placesApi, membersApi, flightsApi } from "@/integrations/api";
-import type { GenerateTripPayload } from "@/integrations/api/modules/trips";
+import type { ChecklistItemPayload, GenerateTripPayload } from "@/integrations/api/modules/trips";
 import type { UpdateProfilePayload, ChangePasswordPayload } from "@/integrations/api/modules/user";
 import type { AddMemberPayload, UpdateMemberPayload } from "@/integrations/api/modules/members";
 
 export const queryKeys = {
   myTrips: ["myTrips"] as const,
   tripDetail: (id: number) => ["tripDetail", id] as const,
+  tripChecklist: (id: number) => ["tripChecklist", id] as const,
   sharedTrip: (token: string) => ["sharedTrip", token] as const,
   myProfile: ["myProfile"] as const,
   tripMembers: (tripId: number) => ["tripMembers", tripId] as const,
@@ -24,6 +25,72 @@ export function useTripDetail(id: number | null) {
     queryKey: queryKeys.tripDetail(id ?? -1),
     queryFn: () => tripsApi.getTripDetail(id!),
     enabled: id != null,
+  });
+}
+
+export function useTripChecklist(tripId: number | null, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.tripChecklist(tripId ?? -1),
+    queryFn: () => tripsApi.getChecklist(tripId!),
+    enabled: enabled && tripId != null,
+  });
+}
+
+function invalidateChecklistQueries(qc: ReturnType<typeof useQueryClient>, tripId: number) {
+  qc.invalidateQueries({ queryKey: queryKeys.tripChecklist(tripId) });
+  qc.invalidateQueries({ queryKey: queryKeys.tripDetail(tripId) });
+  qc.invalidateQueries({ queryKey: queryKeys.myTrips });
+}
+
+export function useAddChecklistItem(tripId: number | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: ChecklistItemPayload) => {
+      if (tripId == null) throw new Error("Missing trip id");
+      return tripsApi.addChecklistItem(tripId, payload);
+    },
+    onSuccess: () => {
+      if (tripId != null) invalidateChecklistQueries(qc, tripId);
+    },
+  });
+}
+
+export function useUpdateChecklistItem(tripId: number | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ itemId, payload }: { itemId: number; payload: Partial<ChecklistItemPayload> }) => {
+      if (tripId == null) throw new Error("Missing trip id");
+      return tripsApi.updateChecklistItem(tripId, itemId, payload);
+    },
+    onSuccess: () => {
+      if (tripId != null) invalidateChecklistQueries(qc, tripId);
+    },
+  });
+}
+
+export function useToggleChecklistItem(tripId: number | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (itemId: number) => {
+      if (tripId == null) throw new Error("Missing trip id");
+      return tripsApi.toggleChecklistItem(tripId, itemId);
+    },
+    onSuccess: () => {
+      if (tripId != null) invalidateChecklistQueries(qc, tripId);
+    },
+  });
+}
+
+export function useDeleteChecklistItem(tripId: number | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (itemId: number) => {
+      if (tripId == null) throw new Error("Missing trip id");
+      return tripsApi.deleteChecklistItem(tripId, itemId);
+    },
+    onSuccess: () => {
+      if (tripId != null) invalidateChecklistQueries(qc, tripId);
+    },
   });
 }
 

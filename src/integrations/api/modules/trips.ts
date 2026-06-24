@@ -1,5 +1,14 @@
 import apiClient from "../client";
-import type { ApiResponse, TripDetail, TripGenerateResponse, TripSummary, ShareTokenResponse } from "../types";
+import type {
+  ApiResponse,
+  ActivityDetail,
+  ChecklistCategory,
+  ChecklistDetail,
+  TripDetail,
+  TripGenerateResponse,
+  TripSummary,
+  ShareTokenResponse,
+} from "../types";
 
 export interface GenerateTripPayload {
   departure: string;
@@ -15,9 +24,62 @@ export interface GenerateTripPayload {
   tickets: number;
 }
 
+export interface ChecklistItemPayload {
+  name: string;
+  category: ChecklistCategory;
+}
+
+export type ActivityAlternativeCategory =
+  | "RESTAURANT"
+  | "HOTEL"
+  | "ATTRACTION"
+  | "CAFE"
+  | "TRANSPORT";
+
+export interface ActivityAlternativeOption {
+  optionId: string;
+  name: string;
+  description: string | null;
+  type: string;
+  costVnd: number | null;
+  searchQuery: string | null;
+  reason: string | null;
+  placeCacheId: number | null;
+  address: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  rating: number | null;
+  reviewCount: number | null;
+  imageUrl: string | null;
+  bookingUrl: string | null;
+  openState: string | null;
+}
+
+export interface ActivityAlternativesResponse {
+  sessionId: number | null;
+  category: ActivityAlternativeCategory | null;
+  freeSwapsRemaining: number;
+  chargeUnitsIfApplied: number;
+  chargeCreditsIfApplied: number;
+  options: ActivityAlternativeOption[];
+}
+
+export interface ReplaceActivityResponse {
+  activity: ActivityDetail;
+  freeSwapsRemaining: number;
+  chargedUnits: number;
+  chargedCredits: number;
+  aiCreditUnitsRemaining: number | null;
+  aiCreditBalance: number | null;
+}
+
 export const tripsApi = {
-  generate: async (payload: GenerateTripPayload) => {
-    const { data } = await apiClient.post<ApiResponse<TripGenerateResponse>>("/trips/generate", payload, {
+  generate: async (
+    payload: GenerateTripPayload
+  ): Promise<TripGenerateResponse & { geocodeFailedCount?: number | null }> => {
+    const { data } = await apiClient.post<
+      ApiResponse<TripGenerateResponse & { geocodeFailedCount?: number | null }>
+    >("/trips/generate", payload, {
       timeout: 120_000,
     });
     return data.data;
@@ -50,6 +112,71 @@ export const tripsApi = {
 
   reorderActivities: async (tripId: number, dayId: number, orderedIds: number[]) => {
     await apiClient.post(`/trips/${tripId}/days/${dayId}/activities/reorder`, { orderedIds });
+  },
+
+  getChecklist: async (tripId: number) => {
+    const { data } = await apiClient.get<ApiResponse<ChecklistDetail[]>>(`/trips/${tripId}/checklist`);
+    return data.data;
+  },
+
+  addChecklistItem: async (tripId: number, payload: ChecklistItemPayload) => {
+    const { data } = await apiClient.post<ApiResponse<ChecklistDetail>>(`/trips/${tripId}/checklist`, payload);
+    return data.data;
+  },
+
+  updateChecklistItem: async (tripId: number, itemId: number, payload: Partial<ChecklistItemPayload>) => {
+    const { data } = await apiClient.patch<ApiResponse<ChecklistDetail>>(
+      `/trips/${tripId}/checklist/${itemId}`,
+      payload
+    );
+    return data.data;
+  },
+
+  toggleChecklistItem: async (tripId: number, itemId: number) => {
+    const { data } = await apiClient.patch<ApiResponse<ChecklistDetail>>(`/trips/${tripId}/checklist/${itemId}/toggle`);
+    return data.data;
+  },
+
+  deleteChecklistItem: async (tripId: number, itemId: number) => {
+    await apiClient.delete(`/trips/${tripId}/checklist/${itemId}`);
+  },
+
+  createActivityAlternatives: async (
+    tripId: number,
+    dayId: number,
+    activityId: number,
+    payload: { category: ActivityAlternativeCategory; limit?: number }
+  ) => {
+    const { data } = await apiClient.post<ApiResponse<ActivityAlternativesResponse>>(
+      `/trips/${tripId}/days/${dayId}/activities/${activityId}/alternatives`,
+      payload,
+      { timeout: 120_000 }
+    );
+    return data.data;
+  },
+
+  getActivityAlternatives: async (
+    tripId: number,
+    dayId: number,
+    activityId: number
+  ) => {
+    const { data } = await apiClient.get<ApiResponse<ActivityAlternativesResponse>>(
+      `/trips/${tripId}/days/${dayId}/activities/${activityId}/alternatives`
+    );
+    return data.data;
+  },
+
+  replaceActivity: async (
+    tripId: number,
+    dayId: number,
+    activityId: number,
+    payload: { sessionId: number; optionId: string }
+  ) => {
+    const { data } = await apiClient.post<ApiResponse<ReplaceActivityResponse>>(
+      `/trips/${tripId}/days/${dayId}/activities/${activityId}/replace`,
+      payload
+    );
+    return data.data;
   },
 
   cloneTrip: async (id: number) => {

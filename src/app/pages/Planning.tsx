@@ -1,10 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { CalendarDays, ArrowRight, ArrowLeft, Sparkles, Loader2, Check, ArrowLeftRight, MapPin, Users, AlertCircle, RotateCcw } from "lucide-react";
+import { CalendarDays, ArrowRight, ArrowLeft, Sparkles, Loader2, Check, ArrowLeftRight, MapPin, Users, AlertCircle, RotateCcw, Crown } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { useAuth } from "@/features/auth/useAuth";
+import { useEntitlements, useInvalidateEntitlements } from "@/hooks/useEntitlements";
+import { openUpgrade } from "@/features/premium/upgradeStore";
+import { computeTripDays, exceedsDays, exceedsStyles, generateGateReason } from "@/features/premium/limits";
 import { tripsApi, aiApi, placesApi, type PlaceLookupResult, type PlacePrediction } from "@/integrations/api";
 import { usePlaceAutocomplete } from "@/features/planning/usePlaceAutocomplete";
 import { mapTripDetailToPlan } from "@/lib/trip-mapper";
@@ -86,6 +89,8 @@ const getTodayInputValue = () => {
 const Planning = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
+  const { data: ent } = useEntitlements();
+  const invalidateEntitlements = useInvalidateEntitlements();
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -122,6 +127,12 @@ const Planning = () => {
   const [suggestStep, setSuggestStep] = useState(0); // 0: preferences, 1: results
 
   const toggleStyle = (id: string) => {
+    const alreadySelected = styles.includes(id);
+    // Bỏ chọn luôn được. Chọn thêm khi đã chạm giới hạn gói → mở UpgradeDialog, không chọn.
+    if (!alreadySelected && maxStyles != null && styles.length >= maxStyles) {
+      openUpgrade("LIMIT_EXCEEDED");
+      return;
+    }
     setStyles((prev) =>
       prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]
     );
@@ -213,6 +224,13 @@ const Planning = () => {
   const BUDGET_VND_MAP = [400_000, 750_000, 1_500_000, 2_500_000, 4_000_000, 6_500_000, 10_000_000, 15_000_000];
   const todayIso = getTodayInputValue();
 
+  // Giới hạn theo tier — lấy từ entitlements (không hardcode). Pre-check là UX; BE vẫn chốt chặn.
+  const maxTripDays = ent?.limits.maxTripDays;
+  const maxStyles = ent?.limits.maxStyles;
+  const tripDays = useMemo(() => computeTripDays(dates.start, dates.end), [dates.start, dates.end]);
+  const daysExceeded = exceedsDays(ent, tripDays);
+  const stylesExceeded = exceedsStyles(ent, styles.length);
+
   const getDateValidationMessage = () => {
     if (!dates.start || !dates.end) return "Vui long chon day du ngay di va ngay ve";
     if (dates.start < todayIso) return "Ngay di khong duoc o qua khu";
@@ -242,6 +260,13 @@ const Planning = () => {
       return;
     }
 
+    // Gate theo tier (mirror BE) — mở UpgradeDialog thay vì gọi API rồi nhận lỗi.
+    const gateReason = generateGateReason(ent, tripDays, styles.length);
+    if (gateReason) {
+      openUpgrade(gateReason);
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
     const analyticsPayload = {
@@ -268,6 +293,7 @@ const Planning = () => {
       });
 
       trackEvent("generate_succeeded", { ...analyticsPayload, tripId: data.id });
+      invalidateEntitlements();   // số lượt vừa bị trừ → cập nhật badge / gate
       if (data.geocodeFailedCount && data.geocodeFailedCount > 0) {
         toast.info(`${data.geocodeFailedCount} hoạt động chưa định vị được trên bản đồ`, {
           description: "Lịch trình vẫn dùng được; một vài hoạt động có thể chưa hiện trên bản đồ.",
@@ -424,6 +450,21 @@ const Planning = () => {
             </div>
           </div>
 
+          {/* Tier limit hint — số ngày vượt gói thường */}
+          {daysExceeded && (
+            <button
+              type="button"
+              onClick={() => openUpgrade("LIMIT_EXCEEDED")}
+              className="w-full flex items-center gap-2.5 rounded-xl border-2 border-gold bg-foil px-3.5 py-2.5 text-left transition-all hover:shadow-warm"
+            >
+              <Crown className="w-4 h-4 text-gold shrink-0" />
+              <span className="text-xs leading-snug text-foreground/80">
+                Gói thường tạo tối đa <b className="font-data">{maxTripDays}</b> ngày — chuyến này <b className="font-data">{tripDays}</b> ngày.{" "}
+                <span className="font-semibold text-gold">Nâng hạng để mở tới 10 ngày →</span>
+              </span>
+            </button>
+          )}
+
           {/* Travelers */}
           <div className="space-y-2">
             <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5"><Users className="w-3.5 h-3.5" /> Số người</label>
@@ -461,7 +502,16 @@ const Planning = () => {
       <motion.div key="known-1" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -30 }} className="flex flex-col items-center gap-6">
         <div className="text-center space-y-2">
           <h2 className="text-2xl lg:text-3xl font-bold text-foreground">✨ Gu du lịch của bạn?</h2>
-          <p className="text-muted-foreground text-sm">Chọn một hoặc nhiều phong cách</p>
+          <p className="text-muted-foreground text-sm">
+            Chọn một hoặc nhiều phong cách
+            {ent && !ent.isPremium && maxStyles != null && (
+              <>
+                {" · "}
+                <span className="font-data font-semibold text-foreground">{styles.length}/{maxStyles}</span>
+                <span className="text-muted-foreground"> (gói thường)</span>
+              </>
+            )}
+          </p>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 w-full max-w-2xl">
           {travelStyles.map((s) => (
@@ -476,6 +526,19 @@ const Planning = () => {
             </button>
           ))}
         </div>
+        {stylesExceeded && (
+          <button
+            type="button"
+            onClick={() => openUpgrade("LIMIT_EXCEEDED")}
+            className="w-full max-w-2xl flex items-center gap-2.5 rounded-xl border-2 border-gold bg-foil px-3.5 py-2.5 text-left transition-all hover:shadow-warm"
+          >
+            <Crown className="w-4 h-4 text-gold shrink-0" />
+            <span className="text-xs leading-snug text-foreground/80">
+              Gói thường chọn tối đa <b className="font-data">{maxStyles}</b> phong cách (bạn chọn <b className="font-data">{styles.length}</b>).{" "}
+              <span className="font-semibold text-gold">Nâng hạng để chọn không giới hạn →</span>
+            </span>
+          </button>
+        )}
         <div className="flex items-center gap-4 mt-2">
           <Button variant="ghost" onClick={() => setKnownStep(0)}>
             <ArrowLeft className="w-4 h-4" /> Quay lại
@@ -635,6 +698,7 @@ const Planning = () => {
                 </div>
                 <h2 className="text-2xl font-bold text-foreground">AI đang tạo lịch trình...</h2>
                 <p className="text-muted-foreground">Chip Trip đang tìm kiếm lịch trình hoàn hảo cho <span className="font-semibold text-chip-orange">{destination}</span></p>
+                <p className="text-xs text-muted-foreground">Có thể mất 1–2 phút. Vui lòng giữ nguyên trang — lượt chỉ bị trừ khi lịch trình tạo xong.</p>
               </motion.div>
             ) : error ? (
               <motion.div key="error" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center justify-center min-h-[60vh] gap-6 text-center">

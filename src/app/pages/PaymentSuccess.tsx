@@ -6,6 +6,7 @@ import { AlertCircle, ArrowRight, CheckCircle2, Crown, Loader2, Receipt, Sparkle
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/features/auth/useAuth";
+import { useEntitlements, useInvalidateEntitlements } from "@/hooks/useEntitlements";
 import { paymentsApi } from "@/integrations/api";
 import { userApi } from "@/integrations/api/modules/user";
 import type { PaymentOrder } from "@/integrations/api/types";
@@ -37,6 +38,8 @@ const PaymentSuccess = () => {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const { user, loading: authLoading, profile, updateProfile } = useAuth();
+  const { data: ent } = useEntitlements();
+  const invalidateEntitlements = useInvalidateEntitlements();
 
   const state = location.state as PaymentSuccessState | null;
   const stateOrder = state?.order;
@@ -58,7 +61,9 @@ const PaymentSuccess = () => {
         if (nextProfile) updateProfile(nextProfile);
       })
       .catch(() => {});
-  }, [user, updateProfile]);
+    // Paid credit vừa được cộng → premium suy ra lại; làm mới badge/gate toàn app.
+    invalidateEntitlements();
+  }, [user, updateProfile, invalidateEntitlements]);
 
   const orderQuery = useQuery({
     queryKey: ["paymentSuccessOrder", orderId],
@@ -73,7 +78,8 @@ const PaymentSuccess = () => {
     [order?.planCode, state?.planName],
   );
   const isPaid = order?.status === "PAID";
-  const isPremium = (profile?.role ?? user?.role) === "ROLE_PREMIUM";
+  // Premium suy ra từ paid balance (entitlements / profile), KHÔNG còn dựa vào ROLE_PREMIUM.
+  const isPremium = ent?.isPremium ?? profile?.isPremium ?? false;
 
   if (authLoading || (orderId && orderQuery.isLoading && !order)) {
     return (

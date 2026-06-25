@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
-import { Plane, PlaneTakeoff, PlaneLanding, ExternalLink, Loader2, ArrowRight } from "lucide-react";
+import { Plane, PlaneTakeoff, PlaneLanding, ExternalLink, Loader2, ArrowRight, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTripFlights } from "@/hooks/useApi";
+import { useEntitlements } from "@/hooks/useEntitlements";
+import { openUpgrade } from "@/features/premium/upgradeStore";
 import type { FlightLeg } from "@/integrations/api/modules/flights";
 
 // Mã sân bay VN → tên thành phố (để hiển thị thân thiện, không chỉ IATA).
@@ -56,18 +58,26 @@ const LegRow = ({ leg, icon, label }: { leg: FlightLeg; icon: React.ReactNode; l
 
 const FLIGHT_REQUESTED_PREFIX = "chip-flights-requested-";
 
-const FlightCard = ({ tripId }: { tripId: number }) => {
+const FlightCard = ({ tripId, createdAsPremium }: { tripId: number; createdAsPremium?: boolean }) => {
   const [fetch, setFetch] = useState(false);
-  const { data, isLoading, error } = useTripFlights(tripId, fetch);
+  const { data: ent } = useEntitlements();
+  // Mở khoá nếu chuyến tạo bởi Premium HOẶC user hiện đang Premium (nạp gói mở khoá chuyến cũ).
+  const locked = createdAsPremium === false && !ent?.isPremium;
+  const { data, isLoading, error } = useTripFlights(tripId, fetch && !locked);
 
   // Nhớ trạng thái "đã gợi ý vé" theo trip — reload sẽ tự tải lại (BE cache 6h) thay vì mất.
   useEffect(() => {
+    if (locked) { setFetch(false); return; }
     let requested = false;
     try { requested = localStorage.getItem(FLIGHT_REQUESTED_PREFIX + tripId) === "1"; } catch { /* ignore */ }
     setFetch(requested);
-  }, [tripId]);
+  }, [tripId, locked]);
 
   const handleFetch = () => {
+    if (locked) {
+      openUpgrade("PREMIUM_REQUIRED");
+      return;
+    }
     setFetch(true);
     try { localStorage.setItem(FLIGHT_REQUESTED_PREFIX + tripId, "1"); } catch { /* ignore */ }
   };
@@ -76,16 +86,32 @@ const FlightCard = ({ tripId }: { tripId: number }) => {
     <div id="flight-card" className="rounded-2xl border border-border bg-card shadow-card p-5 space-y-3 scroll-mt-24">
       <h3 className="font-display font-bold text-foreground flex items-center gap-2">
         <Plane className="w-4 h-4 text-chip-orange" /> Vé máy bay
+        {locked && (
+          <span className="ml-auto inline-flex items-center gap-1 rounded-full border border-gold bg-foil px-1.5 py-0.5 text-[10px] font-bold text-gold">
+            <Crown className="w-2.5 h-2.5" /> Premium
+          </span>
+        )}
       </h3>
 
       {!fetch && (
         <>
           <p className="text-xs text-muted-foreground">
-            Tìm vé máy bay khứ hồi cho chuyến đi qua Google Flights.
+            {locked
+              ? "Gợi ý vé máy bay chỉ dành cho chuyến đi tạo bằng tài khoản Premium."
+              : "Tìm vé máy bay khứ hồi cho chuyến đi qua Google Flights."}
           </p>
-          <Button variant="hero" size="sm" className="w-full" onClick={handleFetch}>
-            <Plane className="w-4 h-4" /> Gợi ý vé máy bay
-          </Button>
+          {locked ? (
+            <button
+              onClick={handleFetch}
+              className="flex h-9 w-full items-center justify-center gap-2 rounded-xl border-2 border-gold bg-gradient-to-br from-chip-yellow to-chip-gold text-sm font-display font-bold text-[hsl(25_35%_14%)] shadow-warm transition-all hover:brightness-[1.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-chip-gold-ink"
+            >
+              <Crown className="w-4 h-4" /> Nâng hạng để gợi ý vé
+            </button>
+          ) : (
+            <Button variant="hero" size="sm" className="w-full" onClick={handleFetch}>
+              <Plane className="w-4 h-4" /> Gợi ý vé máy bay
+            </Button>
+          )}
         </>
       )}
 

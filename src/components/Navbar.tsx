@@ -3,17 +3,21 @@ import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { MapPin, User, Zap, Moon, Sun, Crown, LogOut, Settings, UserCircle } from "lucide-react";
 import { useAuth } from "@/features/auth/useAuth";
+import { useEntitlements } from "@/hooks/useEntitlements";
 import { NotificationBell } from "@/features/notifications/NotificationBell";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 
+const formatCredit = (v: number) =>
+  Number.isInteger(v) ? String(v) : v.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
+
 const Navbar = () => {
   const location = useLocation();
   const { user, profile, signOut, isAdmin } = useAuth();
-  const creditBalance = Number(profile?.aiCreditBalance ?? profile?.aiCredits ?? 0);
-  const credits = Number.isInteger(creditBalance)
-    ? String(creditBalance)
-    : creditBalance.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
+  const { data: ent } = useEntitlements();
+  const isPremium = ent?.isPremium ?? profile?.isPremium ?? false;
+  const paidBalance = Number(ent?.paidCreditBalance ?? profile?.aiCreditBalance ?? 0);
+  const trialLeft = Number(ent?.trialCreditBalance ?? profile?.trialCreditBalance ?? 0);
   const [dark, setDark] = useState(() => {
     if (typeof window !== "undefined") {
       return document.documentElement.classList.contains("dark");
@@ -74,13 +78,28 @@ const Navbar = () => {
         </Link>
 
         <div className="flex items-center gap-2 sm:gap-3">
-          {/* Credits badge */}
-          {user && (
-            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-chip-yellow-light border border-chip-yellow/30">
-              <Zap className="w-3.5 h-3.5 text-chip-orange" />
-              <span className="text-xs font-bold text-foreground">{credits}</span>
-              <span className="text-xs text-muted-foreground">lượt AI</span>
-            </div>
+          {/* Credit / Premium badge — single source of truth từ entitlements */}
+          {user && !isAdmin && (
+            isPremium ? (
+              <Link
+                to="/premium"
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-foil border-2 border-gold shadow-warm"
+                title="Tài khoản Premium"
+              >
+                <Crown className="w-3.5 h-3.5 text-gold" />
+                <span className="text-xs font-bold text-gold">Premium</span>
+                <span className="font-data text-xs text-foreground/70">{formatCredit(paidBalance)}</span>
+              </Link>
+            ) : (
+              <div
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-chip-yellow-light border border-chip-yellow/30"
+                title="Lượt tạo lịch trình miễn phí còn lại hôm nay"
+              >
+                <Zap className="w-3.5 h-3.5 text-chip-orange" />
+                <span className="text-xs font-bold text-foreground">{trialLeft}</span>
+                <span className="text-xs text-muted-foreground">lượt hôm nay</span>
+              </div>
+            )
           )}
 
           {/* Notification bell — chỉ khi đã đăng nhập */}

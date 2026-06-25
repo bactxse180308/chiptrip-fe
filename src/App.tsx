@@ -9,6 +9,7 @@ import { trackPageView } from "@/lib/analytics";
 import Index from "@/app/pages/Index";
 import MobileNav from "@/components/MobileNav";
 import { ChatWidget } from "@/features/chat/ChatWidget";
+import { UpgradeDialog } from "@/features/premium/UpgradeDialog";
 
 // Code-split theo route — giảm first load (bundle gộp ~1.3MB trước đây)
 const Planning = lazy(() => import("@/app/pages/Planning"));
@@ -79,6 +80,7 @@ const App = () => (
           </Suspense>
           <MobileNav />
           <ChatWidget />
+          <UpgradeDialog />
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

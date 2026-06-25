@@ -51,6 +51,10 @@
     --chip-teal: 187 82% 28%;
     --chip-teal-ink: 191 70% 18%;
     --chip-teal-light: 186 44% 92%;
+    /* Premium foil gold — used ONLY on premium surfaces (upgrade pass, premium badge).
+       The single signal that separates "first class" from everyday orange. */
+    --chip-gold: 41 74% 49%;
+    --chip-gold-ink: 38 68% 31%;
     --on-image-text: 0 0% 100%;
     --on-image-text-muted: 0 0% 100%;
 
@@ -101,6 +105,8 @@
     --chip-teal: 186 58% 52%;
     --chip-teal-ink: 186 50% 72%;
     --chip-teal-light: 188 40% 18%;
+    --chip-gold: 43 76% 57%;
+    --chip-gold-ink: 43 82% 72%;
     --on-image-text: 0 0% 100%;
     --on-image-text-muted: 0 0% 100%;
   }
@@ -230,13 +236,65 @@
   .dark .stamp {
     mix-blend-mode: screen;
   }
+
+  /* === Premium "first class" surfaces — gold foil, used sparingly === */
+
+  /* Brushed-foil gold: a real diagonal sheen, not a flat fill */
+  .bg-foil {
+    background-image:
+      linear-gradient(135deg,
+        hsl(var(--chip-gold) / 0.16) 0%,
+        hsl(var(--chip-yellow) / 0.10) 38%,
+        hsl(var(--chip-gold) / 0.22) 62%,
+        hsl(var(--chip-gold) / 0.10) 100%);
+  }
+  .text-gold {
+    color: hsl(var(--chip-gold-ink));
+  }
+  .border-gold {
+    border-color: hsl(var(--chip-gold) / 0.55);
+  }
+  .shadow-foil {
+    box-shadow:
+      0 1px 0 hsl(var(--chip-gold) / 0.30) inset,
+      0 24px 60px -22px hsl(38 70% 32% / 0.45),
+      0 6px 16px -8px hsl(38 60% 30% / 0.25);
+  }
+  /* Gold passport stamp for the "FIRST CLASS" mark on the upgrade pass */
+  .stamp-gold {
+    border: 2px solid hsl(var(--chip-gold-ink) / 0.6);
+    color: hsl(var(--chip-gold-ink));
+    border-radius: 0.5rem;
+    mix-blend-mode: multiply;
+  }
+  .dark .stamp-gold {
+    mix-blend-mode: screen;
+  }
+
+  /* Slow foil shimmer sweeping across the pass header (reduced-motion safe below) */
+  @keyframes foil-sweep {
+    0% { background-position: -120% 0; }
+    100% { background-position: 220% 0; }
+  }
+  .foil-sweep {
+    background-image: linear-gradient(
+      100deg,
+      transparent 35%,
+      hsl(var(--chip-gold) / 0.45) 50%,
+      transparent 65%
+    );
+    background-size: 220% 100%;
+    background-repeat: no-repeat;
+    animation: foil-sweep 4.5s ease-in-out infinite;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .animate-marquee,
   .animate-bounce,
   .animate-float,
-  .animate-pulse-glow {
+  .animate-pulse-glow,
+  .foil-sweep {
     animation: none !important;
   }
 }

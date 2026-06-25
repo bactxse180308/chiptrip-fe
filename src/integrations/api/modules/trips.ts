@@ -80,7 +80,10 @@ export const tripsApi = {
     const { data } = await apiClient.post<
       ApiResponse<TripGenerateResponse & { geocodeFailedCount?: number | null }>
     >("/trips/generate", payload, {
-      timeout: 120_000,
+      // PHẢI lớn hơn worst-case của BE (model pro): LLM 90s × (1+max-retries) + geocode ~60s ≈ 240s.
+      // Nếu client timeout sớm hơn BE, BE vẫn persist trip + trừ credit → user thấy "lỗi mà vẫn mất lượt".
+      // Đợi đủ lâu để luôn nhận kết quả cuối: trừ credit ⇔ thực sự nhận được lịch trình.
+      timeout: 270_000,
     });
     return data.data;
   },

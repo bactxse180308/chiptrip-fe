@@ -114,9 +114,27 @@ export interface UserProfile {
   aiCredits: number;
   aiCreditUnits?: number;
   aiCreditBalance?: number;
+  /** Premium suy ra từ paid balance (paid > 0) — thay cho check role cũ. */
+  isPremium?: boolean;
+  /** Lượt miễn phí còn hôm nay (0/1). */
+  trialCreditBalance?: number;
   createdAt: string;
   role?: string;
   preferences?: string | null;
+}
+
+/** Quyền & giới hạn theo tier — GET /me/entitlements (CREDIT_PREMIUM_SPEC.md Mục 6.1). */
+export interface Entitlements {
+  accountType: "NORMAL" | "PREMIUM";
+  isPremium: boolean;
+  trialCreditBalance: number;
+  paidCreditBalance: number;
+  limits: {
+    maxTripDays: number;
+    maxStyles: number;
+    canExportPdf: boolean;
+    canRegenerate: boolean;
+  };
 }
 
 export interface TripSummary {
@@ -207,6 +225,8 @@ export interface TripDetail {
   likesCount?: number | null;
   commentsCount?: number | null;
   status?: TripLifecycleStatus | null;
+  /** Snapshot lúc tạo: trip tạo bởi Premium → cho phép Export PDF & gate FE. */
+  createdAsPremium?: boolean;
   user?: { id: number; email: string; fullName: string | null; avatarUrl: string | null } | null;
   members: TripMemberResponse[];
   days: DayDetail[];

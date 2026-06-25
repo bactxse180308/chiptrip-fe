@@ -1,4 +1,5 @@
 import axios from "axios";
+import { handleUpgradeError } from "@/features/premium/upgradeStore";
 
 const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080/api/v1";
 
@@ -100,6 +101,10 @@ apiClient.interceptors.response.use(
         return Promise.reject(refreshError);
       }
     }
+
+    // Lưới an toàn cuối: lỗi credit/premium (402/403) → mở UpgradeDialog đúng lý do.
+    // Pre-check ở FE là UX; đây là chốt chặn khi pre-check lệch (nhiều tab, vừa hết trial...).
+    handleUpgradeError(error);
 
     return Promise.reject(error);
   }

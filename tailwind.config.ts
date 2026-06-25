@@ -66,6 +66,8 @@ export default {
           teal: "hsl(var(--chip-teal))",
           "teal-ink": "hsl(var(--chip-teal-ink))",
           "teal-light": "hsl(var(--chip-teal-light))",
+          gold: "hsl(var(--chip-gold))",
+          "gold-ink": "hsl(var(--chip-gold-ink))",
         },
         "on-image": {
           text: "hsl(var(--on-image-text))",

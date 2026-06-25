@@ -6,6 +6,8 @@ import type { TripItem } from "@/features/planning/trip-data";
 import { getPlaceImage } from "@/features/planning/place-image";
 import SafeImage from "@/components/SafeImage";
 import { tripsApi } from "@/integrations/api";
+import { useEntitlements } from "@/hooks/useEntitlements";
+import { openUpgrade } from "@/features/premium/upgradeStore";
 import type {
   ActivityAlternativeCategory,
   ActivityAlternativeOption,
@@ -29,6 +31,8 @@ interface Props {
   tripId: number | null;
   dayId: number | null;
   activityId: number | null;
+  /** Chuyến tạo bởi Premium → dùng được dù paid hiện tại = 0 (còn lượt free). */
+  createdAsPremium?: boolean;
   onApplied: (response: ReplaceActivityResponse) => Promise<void> | void;
 }
 
@@ -58,13 +62,23 @@ function bookingTypeFromActivityType(type: string | null | undefined): TripItem[
   }
 }
 
-const SuggestAlternativeModal = ({ open, onClose, item, previousItem, tripId, dayId, activityId, onApplied }: Props) => {
+const SuggestAlternativeModal = ({ open, onClose, item, previousItem, tripId, dayId, activityId, createdAsPremium, onApplied }: Props) => {
   const [selectedCategory, setSelectedCategory] = useState<ActivityAlternativeCategory | null>(null);
   const [response, setResponse] = useState<ActivityAlternativesResponse | null>(null);
   const [alternatives, setAlternatives] = useState<ActivityAlternativeOption[]>([]);
   const [loading, setLoading] = useState(false);
   const [replacingOptionId, setReplacingOptionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { data: ent } = useEntitlements();
+
+  // Đổi hoạt động là Premium — cho phép nếu chuyến tạo bởi Premium HOẶC user đang Premium.
+  // Chỉ chuyến Normal + user chưa nạp gói mới chuyển sang UpgradeDialog.
+  useEffect(() => {
+    if (open && ent && !ent.isPremium && !createdAsPremium) {
+      onClose();
+      openUpgrade("PREMIUM_REQUIRED");
+    }
+  }, [open, ent, createdAsPremium, onClose]);
 
   const canCallApi = Boolean(item && tripId && dayId && activityId);
   const currentIsHotel = item?.bookingType === "hotel";

@@ -658,7 +658,7 @@ const Result = () => {
                   </div>
                 </div>
 
-                {!isSharedView && dbTripId && <div data-reveal><FlightCard tripId={dbTripId} /></div>}
+                {!isSharedView && dbTripId && <div data-reveal><FlightCard tripId={dbTripId} createdAsPremium={remoteTrip?.createdAsPremium} /></div>}
 
                 <div data-reveal>
                   <WeatherWidget destination={trip.destination} dates={trip.days.map(d => d.date).filter(Boolean)} />
@@ -965,7 +965,7 @@ const Result = () => {
                 <Globe className="w-4 h-4" />
                 {isPublic ? "Hủy công khai" : "Đăng công khai"}
               </Button>
-              <ExportDialog trip={trip} dbTripId={dbTripId}>
+              <ExportDialog trip={trip} dbTripId={dbTripId} createdAsPremium={remoteTrip?.createdAsPremium}>
                 <Button variant="soft" size="sm" className="gap-1.5 flex-shrink-0">
                   <Download className="w-4 h-4" /> Xuất
                 </Button>
@@ -1005,6 +1005,7 @@ const Result = () => {
         tripId={dbTripId}
         dayId={remoteTrip?.days?.[swapModal.dayIdx]?.id ?? null}
         activityId={swapModal.item ? Number(swapModal.item.id) : null}
+        createdAsPremium={remoteTrip?.createdAsPremium}
         onApplied={handleSwapItem}
       />
     </div>

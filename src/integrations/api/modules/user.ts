@@ -1,5 +1,5 @@
 import apiClient from "../client";
-import type { ApiResponse, UserProfile } from "../types";
+import type { ApiResponse, Entitlements, UserProfile } from "../types";
 
 export interface UpdateProfilePayload {
   fullName?: string;
@@ -15,6 +15,11 @@ export interface ChangePasswordPayload {
 export const userApi = {
   getMe: async () => {
     const { data } = await apiClient.get<ApiResponse<UserProfile>>("/users/me");
+    return data.data;
+  },
+
+  getEntitlements: async () => {
+    const { data } = await apiClient.get<ApiResponse<Entitlements>>("/me/entitlements");
     return data.data;
   },
 

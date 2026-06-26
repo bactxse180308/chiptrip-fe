@@ -95,6 +95,12 @@ export interface AdminDailyCount {
   count: number;
 }
 
+export interface AdminDailyRevenue {
+  date: string;
+  orders: number;
+  revenueVnd: number;
+}
+
 export interface AdminEventCount {
   event: string;
   count: number;
@@ -209,6 +215,20 @@ export const adminApi = {
 
   getAiCostStats: async (from: string, to: string) => {
     const { data } = await apiClient.get<ApiResponse<AdminAiCostByProviderMonth[]>>("/admin/stats/ai-cost", {
+      params: { from, to },
+    });
+    return data.data;
+  },
+
+  getRevenueStats: async (from: string, to: string) => {
+    const { data } = await apiClient.get<ApiResponse<AdminDailyRevenue[]>>("/admin/stats/revenue", {
+      params: { from, to },
+    });
+    return data.data;
+  },
+
+  getAiCallStats: async (from: string, to: string) => {
+    const { data } = await apiClient.get<ApiResponse<AdminDailyCount[]>>("/admin/stats/ai-calls", {
       params: { from, to },
     });
     return data.data;

@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Crown, Sparkles, Zap, MapPin, UtensilsCrossed, Shield, Star, Check, ArrowLeft } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 
 const features = [
@@ -41,6 +41,9 @@ const plans = [
 
 const Premium = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const returnTo = searchParams.get("returnTo");
+  const returnParam = returnTo ? `&returnTo=${encodeURIComponent(returnTo)}` : "";
 
   return (
     <div className="min-h-screen bg-background">
@@ -121,7 +124,7 @@ const Premium = () => {
                   variant={plan.active ? "soft" : plan.popular ? "hero" : "soft"}
                   className="w-full"
                   disabled={plan.active}
-                  onClick={() => !plan.active && navigate(`/checkout?plan=${plan.name === "Premium" ? "premium" : "pro"}`)}
+                  onClick={() => !plan.active && navigate(`/checkout?plan=${plan.name === "Premium" ? "premium" : "pro"}${returnParam}`)}
                 >
                   {plan.active ? "Đang dùng" : plan.cta}
                 </Button>

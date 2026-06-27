@@ -31,6 +31,7 @@ const formatDateTime = (value: string | null | undefined) => {
 type PaymentSuccessState = {
   order?: PaymentOrder;
   planName?: string;
+  returnTo?: string;
 };
 
 const PaymentSuccess = () => {
@@ -47,6 +48,8 @@ const PaymentSuccess = () => {
   const orderId = Number.isFinite(parsedOrderId) && parsedOrderId > 0
     ? parsedOrderId
     : stateOrder?.orderId;
+  // Chức năng user bấm trước khi bị chặn → sau khi nạp xong quay lại đúng đó (đã mở khóa).
+  const returnTo = searchParams.get("returnTo") ?? state?.returnTo ?? null;
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -80,6 +83,14 @@ const PaymentSuccess = () => {
   const isPaid = order?.status === "PAID";
   // Premium suy ra từ paid balance (entitlements / profile), KHÔNG còn dựa vào ROLE_PREMIUM.
   const isPremium = ent?.isPremium ?? profile?.isPremium ?? false;
+
+  // Thanh toán xong → tự đưa user về đúng chức năng vừa bấm (entitlements đã invalidate ở trên
+  // nên trang đích đọc lại được trạng thái Premium mới → tính năng đã mở khóa).
+  useEffect(() => {
+    if (!isPaid || !returnTo) return;
+    const timer = setTimeout(() => navigate(returnTo, { replace: true }), 2000);
+    return () => clearTimeout(timer);
+  }, [isPaid, returnTo, navigate]);
 
   if (authLoading || (orderId && orderQuery.isLoading && !order)) {
     return (
@@ -165,15 +176,28 @@ const PaymentSuccess = () => {
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
-              <Button variant="hero" size="lg" onClick={() => navigate("/planning")}>
-                <Sparkles className="h-4 w-4" />
-                Tạo lịch trình AI
-              </Button>
+              {returnTo ? (
+                <Button variant="hero" size="lg" onClick={() => navigate(returnTo, { replace: true })}>
+                  <Sparkles className="h-4 w-4" />
+                  Quay lại và dùng ngay
+                </Button>
+              ) : (
+                <Button variant="hero" size="lg" onClick={() => navigate("/planning")}>
+                  <Sparkles className="h-4 w-4" />
+                  Tạo lịch trình AI
+                </Button>
+              )}
               <Button variant="soft" size="lg" onClick={() => navigate("/profile")}>
                 Xem hồ sơ
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </div>
+
+            {returnTo && (
+              <p className="text-xs text-muted-foreground">
+                Đang tự đưa bạn trở lại chức năng vừa mở khóa…
+              </p>
+            )}
           </section>
         </motion.div>
       </main>

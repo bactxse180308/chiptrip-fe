@@ -41,7 +41,7 @@ const PERKS = [
 const formatVnd = (v: number) => `${v.toLocaleString("vi-VN")}đ`;
 
 export function UpgradeDialog() {
-  const { open, reason } = useUpgradeDialog();
+  const { open, reason, returnTo } = useUpgradeDialog();
   const navigate = useNavigate();
   const reduceMotion = useReducedMotion();
   const [selected, setSelected] = useState<string | null>(null);
@@ -63,15 +63,17 @@ export function UpgradeDialog() {
 
   const copy = REASON_COPY[reason ?? "PREMIUM_REQUIRED"];
 
+  const returnParam = returnTo ? `&returnTo=${encodeURIComponent(returnTo)}` : "";
+
   const goCheckout = () => {
     const plan = (selected ?? plans?.[0]?.code ?? "premium").toLowerCase();
     closeUpgrade();
-    navigate(`/checkout?plan=${plan}`);
+    navigate(`/checkout?plan=${plan}${returnParam}`);
   };
 
   const goPricing = () => {
     closeUpgrade();
-    navigate("/premium");
+    navigate(`/premium${returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ""}`);
   };
 
   return (

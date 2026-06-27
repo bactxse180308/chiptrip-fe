@@ -10,14 +10,25 @@ export type UpgradeReason =
 interface UpgradeState {
   open: boolean;
   reason: UpgradeReason | null;
+  /** Trang user đang ở lúc bị chặn → sau khi nạp xong quay lại đúng chức năng vừa bấm. */
+  returnTo: string | null;
 }
 
 /**
  * Store cấp module (không phải React context) để axios interceptor — chạy NGOÀI React —
  * vẫn mở được dialog. Một UpgradeDialog duy nhất mount ở App lắng nghe store này.
  */
-let state: UpgradeState = { open: false, reason: null };
+let state: UpgradeState = { open: false, reason: null, returnTo: null };
 const listeners = new Set<() => void>();
+
+// Không quay lại các trang thuộc luồng thanh toán/đăng nhập (tránh vòng lặp).
+const NON_RETURN_PREFIXES = ["/checkout", "/premium", "/auth"];
+
+function captureReturnTo(): string | null {
+  if (typeof window === "undefined") return null;
+  const path = window.location.pathname + window.location.search;
+  return NON_RETURN_PREFIXES.some((p) => window.location.pathname.startsWith(p)) ? null : path;
+}
 
 function emit() {
   state = { ...state };
@@ -25,7 +36,7 @@ function emit() {
 }
 
 export function openUpgrade(reason: UpgradeReason) {
-  state = { open: true, reason };
+  state = { open: true, reason, returnTo: captureReturnTo() };
   emit();
 }
 

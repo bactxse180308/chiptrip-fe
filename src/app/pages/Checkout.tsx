@@ -38,6 +38,8 @@ const Checkout = () => {
   const planKey = (searchParams.get("plan") || "premium").toLowerCase();
   const planCode = PLAN_CODE[planKey] || "PREMIUM";
   const planMeta = PLAN_LABEL[planCode];
+  // Chức năng user vừa bấm trước khi bị chặn → trả về đúng đó sau khi thanh toán xong.
+  const returnTo = searchParams.get("returnTo");
 
   const [paid, setPaid] = useState(false);
   const [remaining, setRemaining] = useState<number | null>(null);
@@ -104,13 +106,14 @@ const Checkout = () => {
       .then((p) => { if (p) updateProfile(p); })
       .catch(() => {})
       .finally(() => {
-        navigate(`/checkout/success?orderId=${paidOrder.orderId}`, {
+        const rt = returnTo ? `&returnTo=${encodeURIComponent(returnTo)}` : "";
+        navigate(`/checkout/success?orderId=${paidOrder.orderId}${rt}`, {
           replace: true,
-          state: { order: paidOrder, planName: planMeta.name },
+          state: { order: paidOrder, planName: planMeta.name, returnTo },
         });
       });
     queryClient.invalidateQueries({ queryKey: queryKeys.myProfile });
-  }, [navigate, planCode, planMeta.name, updateProfile, queryClient]);
+  }, [navigate, planCode, planMeta.name, updateProfile, queryClient, returnTo]);
 
   // Countdown theo expiresAt
   useEffect(() => {

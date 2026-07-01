@@ -3,6 +3,7 @@ import { tripsApi, userApi, authApi, placesApi, membersApi, flightsApi } from "@
 import type { ChecklistItemPayload, GenerateTripPayload } from "@/integrations/api/modules/trips";
 import type { UpdateProfilePayload, ChangePasswordPayload } from "@/integrations/api/modules/user";
 import type { AddMemberPayload, UpdateMemberPayload } from "@/integrations/api/modules/members";
+import type { TripDetail } from "@/integrations/api/types";
 
 export const queryKeys = {
   myTrips: ["myTrips"] as const,
@@ -25,6 +26,13 @@ export function useTripDetail(id: number | null) {
     queryKey: queryKeys.tripDetail(id ?? -1),
     queryFn: () => tripsApi.getTripDetail(id!),
     enabled: id != null,
+    // Ngày 2..N enrich ảnh/review ngầm sau khi tạo trip → poll lại để chúng "nảy" ra dần.
+    // Dừng khi backend báo enriching=false, hoặc sau ~20 lần (≈80s) để không poll vô hạn nếu job nền chết.
+    refetchInterval: (query) => {
+      const data = query.state.data as TripDetail | undefined;
+      if (data?.enriching && query.state.dataUpdateCount < 20) return 4000;
+      return false;
+    },
   });
 }
 

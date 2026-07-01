@@ -225,6 +225,8 @@ export interface TripDetail {
   likesCount?: number | null;
   commentsCount?: number | null;
   status?: TripLifecycleStatus | null;
+  /** true khi còn địa điểm ngày 2..N đang enrich nền — FE poll lại tới khi ảnh/review đủ. */
+  enriching?: boolean | null;
   /** Snapshot lúc tạo: trip tạo bởi Premium → cho phép Export PDF & gate FE. */
   createdAsPremium?: boolean;
   user?: { id: number; email: string; fullName: string | null; avatarUrl: string | null } | null;

@@ -7,9 +7,10 @@ import {
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
+import SafeImage from "@/components/SafeImage";
 import { type TripPlan } from "@/features/planning/trip-data";
 import type { TripLifecycleStatus } from "@/integrations/api/types";
-import { getPlaceImage } from "@/features/planning/place-image";
+import { getPlaceImage, optimizePlaceImageUrl } from "@/features/planning/place-image";
 import { toast } from "sonner";
 import { useAuth } from "@/features/auth/useAuth";
 import { tripsApi } from "@/integrations/api";
@@ -101,7 +102,8 @@ const SavedPlans = () => {
   };
 
   const getImage = (trip: TripPlan, imageUrl?: string | null) => {
-    return imageUrl || trip.image || getPlaceImage(trip.destination || trip.title, "attraction", 600, 400);
+    const fallback = getPlaceImage(trip.destination || trip.title, "attraction", 600, 400);
+    return optimizePlaceImageUrl(imageUrl || trip.image || fallback, 600, 400);
   };
 
   const TABS: { key: TripLifecycleStatus; label: string }[] = [
@@ -216,7 +218,14 @@ const SavedPlans = () => {
                     <span className="pointer-events-none absolute inset-x-0 top-0 z-10 h-[3px] bg-gradient-to-r from-transparent via-chip-orange to-chip-yellow opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
                     <div className="relative h-44 overflow-hidden">
-                      <img src={getImage(trip, imageUrl)} alt={trip.title} loading="lazy" className="w-full h-full object-cover group-hover:scale-[1.06] transition-transform duration-700 ease-out" />
+                      <SafeImage
+                        src={getImage(trip, imageUrl)}
+                        fallbackSrc={getPlaceImage(trip.destination || trip.title, "attraction", 600, 400)}
+                        alt={trip.title}
+                        width={600}
+                        height={400}
+                        className="w-full h-full object-cover group-hover:scale-[1.06] transition-transform duration-700 ease-out"
+                      />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-black/0 to-black/10" />
 
                       <div className="absolute top-3 right-3 flex gap-1.5">

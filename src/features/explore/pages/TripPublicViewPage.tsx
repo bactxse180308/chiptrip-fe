@@ -4,8 +4,9 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Calendar, Clock, Copy, Heart, Loader2, MapPin, Users, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import Navbar from "@/components/Navbar";
+import SafeImage from "@/components/SafeImage";
 import { Button } from "@/components/ui/button";
-import { getPlaceImage } from "@/features/planning/place-image";
+import { getPlaceImage, optimizePlaceImageUrl } from "@/features/planning/place-image";
 import { useAuth } from "@/features/auth/useAuth";
 import { useCloneTrip } from "@/hooks/useApi";
 import { mapTripDetailToPlan } from "@/lib/trip-mapper";
@@ -183,9 +184,18 @@ const TripPublicViewPage = () => {
                       className="relative flex gap-4 bg-card rounded-xl p-4 border border-border shadow-card hover:shadow-warm transition-all ml-4 cursor-pointer hover:-translate-y-0.5"
                     >
                       <div className="absolute -left-[1.6rem] top-5 w-3 h-3 rounded-full border-2 border-background bg-chip-orange" />
-                      <img
-                        src={item.image && item.image !== "/placeholder.svg" ? item.image : getPlaceImage(item.title, item.bookingType)}
+                      <SafeImage
+                        src={optimizePlaceImageUrl(
+                          item.image && item.image !== "/placeholder.svg"
+                            ? item.image
+                            : getPlaceImage(item.title, item.bookingType, 160, 160),
+                          160,
+                          160,
+                        )}
+                        fallbackSrc={getPlaceImage(item.title, item.bookingType, 160, 160)}
                         alt={item.title}
+                        width={64}
+                        height={64}
                         className="w-16 h-16 rounded-xl object-cover flex-shrink-0"
                       />
                       <div className="flex-1 min-w-0">

@@ -3,8 +3,9 @@ import { motion } from "framer-motion";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { FileImage, FileText, Link2, Download, Check, Crown } from "lucide-react";
 import { toast } from "sonner";
+import SafeImage from "@/components/SafeImage";
 import type { TripPlan } from "@/features/planning/trip-data";
-import { getPlaceImage } from "@/features/planning/place-image";
+import { getPlaceImage, optimizePlaceImageUrl } from "@/features/planning/place-image";
 import { tripsApi } from "@/integrations/api";
 import { openUpgrade } from "@/features/premium/upgradeStore";
 import { useEntitlements } from "@/hooks/useEntitlements";
@@ -82,7 +83,18 @@ const ExportDialog = ({ trip, dbTripId, createdAsPremium, children }: Props) => 
 
         {/* Trip preview mini */}
         <div className="rounded-xl bg-muted/50 p-4 flex items-center gap-3">
-          <img src={trip.image || getPlaceImage(trip.destination, "attraction")} alt={trip.title} className="w-14 h-14 rounded-xl object-cover" />
+          <SafeImage
+            src={optimizePlaceImageUrl(
+              trip.image || getPlaceImage(trip.destination, "attraction", 128, 128),
+              128,
+              128,
+            )}
+            fallbackSrc={getPlaceImage(trip.destination, "attraction", 128, 128)}
+            alt={trip.title}
+            width={56}
+            height={56}
+            className="w-14 h-14 rounded-xl object-cover"
+          />
           <div>
             <p className="font-semibold text-foreground text-sm">{trip.title}</p>
             <p className="text-xs text-muted-foreground">{trip.dateRange} • {trip.totalCost} VNĐ</p>

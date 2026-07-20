@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { RefreshCw, UtensilsCrossed, Hotel, Camera, Coffee, MapPin, Loader2, Star } from "lucide-react";
 import { toast } from "sonner";
 import type { TripItem } from "@/features/planning/trip-data";
-import { getPlaceImage } from "@/features/planning/place-image";
+import { getPlaceImage, optimizePlaceImageUrl } from "@/features/planning/place-image";
 import SafeImage from "@/components/SafeImage";
 import { tripsApi } from "@/integrations/api";
 import { useEntitlements } from "@/hooks/useEntitlements";
@@ -202,9 +202,17 @@ const SuggestAlternativeModal = ({ open, onClose, item, previousItem, tripId, da
           <div className="space-y-4">
             <div className="bg-muted/50 rounded-xl p-3 flex items-center gap-3">
               <SafeImage
-                src={item.image && item.image !== "/placeholder.svg" ? item.image : getPlaceImage(item.title, item.bookingType)}
-                fallbackSrc={getPlaceImage(item.title, item.bookingType)}
+                src={optimizePlaceImageUrl(
+                  item.image && item.image !== "/placeholder.svg"
+                    ? item.image
+                    : getPlaceImage(item.title, item.bookingType, 128, 128),
+                  128,
+                  128,
+                )}
+                fallbackSrc={getPlaceImage(item.title, item.bookingType, 128, 128)}
                 alt={item.title}
+                width={48}
+                height={48}
                 className="w-12 h-12 rounded-lg object-cover"
               />
               <div className="flex-1 min-w-0">
@@ -271,9 +279,15 @@ const SuggestAlternativeModal = ({ open, onClose, item, previousItem, tripId, da
                         className="w-full flex items-start gap-3 p-3 rounded-xl border border-border bg-card hover:border-chip-orange/40 hover:shadow-warm transition-all text-left disabled:opacity-60"
                       >
                         <SafeImage
-                          src={alt.imageUrl || getPlaceImage(alt.name, bookingType)}
-                          fallbackSrc={getPlaceImage(alt.name, bookingType)}
+                          src={optimizePlaceImageUrl(
+                            alt.imageUrl || getPlaceImage(alt.name, bookingType, 128, 128),
+                            128,
+                            128,
+                          )}
+                          fallbackSrc={getPlaceImage(alt.name, bookingType, 128, 128)}
                           alt={alt.name}
+                          width={56}
+                          height={56}
                           className="w-14 h-14 rounded-lg object-cover flex-shrink-0"
                         />
                         <div className="flex-1 min-w-0">

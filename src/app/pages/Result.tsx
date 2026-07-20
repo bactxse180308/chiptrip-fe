@@ -14,7 +14,7 @@ import Navbar from "@/components/Navbar";
 import GoongMap, { type GoongMapPin } from "@/components/GoongMap";
 import SafeImage from "@/components/SafeImage";
 import { type TripPlan, type TripItem } from "@/features/planning/trip-data";
-import { getPlaceImage } from "@/features/planning/place-image";
+import { getPlaceImage, optimizePlaceImageUrl } from "@/features/planning/place-image";
 import PackingList from "@/features/result/PackingList";
 import ExportDialog from "@/features/result/ExportDialog";
 import SuggestAlternativeModal from "@/features/result/SuggestAlternativeModal";
@@ -920,9 +920,17 @@ const Result = () => {
                                     className="w-full flex gap-3 sm:gap-4 text-left rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-chip-orange/50"
                                   >
                                     <SafeImage
-                                      src={item.image && item.image !== "/placeholder.svg" ? item.image : getPlaceImage(item.title, item.bookingType)}
-                                      fallbackSrc={getPlaceImage(item.title, item.bookingType)}
+                                      src={optimizePlaceImageUrl(
+                                        item.image && item.image !== "/placeholder.svg"
+                                          ? item.image
+                                          : getPlaceImage(item.title, item.bookingType, 160, 160),
+                                        160,
+                                        160,
+                                      )}
+                                      fallbackSrc={getPlaceImage(item.title, item.bookingType, 160, 160)}
                                       alt={item.title}
+                                      width={80}
+                                      height={80}
                                       className={`w-16 h-16 sm:w-20 sm:h-20 rounded-xl object-cover flex-shrink-0 ${isCompleted ? "grayscale" : ""}`}
                                     />
                                     <div className="flex-1 min-w-0">

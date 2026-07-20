@@ -27,6 +27,51 @@ const IMAGE_POOLS: Record<string, string[]> = {
   ],
 };
 
+const normalizeImageDimension = (value: number): number =>
+  Math.min(1600, Math.max(1, Math.round(value)));
+
+/**
+ * Yêu cầu đúng kích thước từ các CDN ảnh đã biết thay vì tải ảnh gốc nhiều MB rồi
+ * thu nhỏ bằng CSS. Provider không có resize contract ổn định được giữ nguyên URL.
+ */
+export function optimizePlaceImageUrl(src: string, width: number, height = width): string {
+  if (!src) return src;
+
+  const targetWidth = normalizeImageDimension(width);
+  const targetHeight = normalizeImageDimension(height);
+
+  try {
+    const url = new URL(src);
+    const host = url.hostname.toLowerCase();
+
+    if (host === "googleusercontent.com" || host.endsWith(".googleusercontent.com")
+      || host === "ggpht.com" || host.endsWith(".ggpht.com")) {
+      const pathWithoutTransform = url.pathname.replace(/=[^/]+$/, "");
+      url.pathname = `${pathWithoutTransform}=w${targetWidth}-h${targetHeight}-c`;
+      return url.toString();
+    }
+
+    if (host === "streetviewpixels-pa.googleapis.com") {
+      url.searchParams.set("w", String(targetWidth));
+      url.searchParams.set("h", String(targetHeight));
+      return url.toString();
+    }
+
+    if (host === "images.unsplash.com") {
+      url.searchParams.set("auto", "format");
+      url.searchParams.set("fit", "crop");
+      url.searchParams.set("q", "80");
+      url.searchParams.set("w", String(targetWidth));
+      url.searchParams.set("h", String(targetHeight));
+      return url.toString();
+    }
+  } catch {
+    // URL local/không hợp lệ: giữ nguyên để browser hoặc SafeImage xử lý fallback.
+  }
+
+  return src;
+}
+
 // Simple hash for consistent image per title
 function hashCode(str: string): number {
   let hash = 0;

@@ -5,7 +5,14 @@ type SafeImageProps = Omit<ImgHTMLAttributes<HTMLImageElement>, "src"> & {
   fallbackSrc: string;
 };
 
-const SafeImage = ({ src, fallbackSrc, onError, ...props }: SafeImageProps) => {
+const SafeImage = ({
+  src,
+  fallbackSrc,
+  onError,
+  loading = "lazy",
+  decoding = "async",
+  ...props
+}: SafeImageProps) => {
   const [currentSrc, setCurrentSrc] = useState(src || fallbackSrc);
 
   useEffect(() => {
@@ -16,6 +23,8 @@ const SafeImage = ({ src, fallbackSrc, onError, ...props }: SafeImageProps) => {
     <img
       {...props}
       src={currentSrc}
+      loading={loading}
+      decoding={decoding}
       onError={(event) => {
         if (currentSrc !== fallbackSrc) {
           setCurrentSrc(fallbackSrc);

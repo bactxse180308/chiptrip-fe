@@ -3,8 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Calendar, Compass, Heart, Loader2, MapPin, MessageCircle, Search, SearchX, TrendingUp, Users } from "lucide-react";
 import Navbar from "@/components/Navbar";
+import SafeImage from "@/components/SafeImage";
 import { Button } from "@/components/ui/button";
-import { getPlaceImage } from "@/features/planning/place-image";
+import { getPlaceImage, optimizePlaceImageUrl } from "@/features/planning/place-image";
 import { usePublicFeed } from "@/features/explore/hooks/usePublicFeed";
 import type { PublicFeedSort, TripPublicSummary } from "@/integrations/api";
 
@@ -31,14 +32,17 @@ function TripCard({ trip, onClick, index }: { trip: TripPublicSummary; onClick: 
       <span className="pointer-events-none absolute inset-x-0 top-0 z-10 h-[3px] bg-gradient-to-r from-transparent via-chip-orange to-chip-yellow opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
       <div className="relative h-48 overflow-hidden">
-        <img
-          src={trip.thumbnailUrl || getPlaceImage(trip.destination || trip.title, "attraction", 600, 400)}
+        <SafeImage
+          src={optimizePlaceImageUrl(
+            trip.thumbnailUrl || getPlaceImage(trip.destination || trip.title, "attraction", 600, 400),
+            600,
+            400,
+          )}
+          fallbackSrc={getPlaceImage(trip.destination || trip.title, "attraction", 600, 400)}
           alt={trip.title}
-          loading="lazy"
+          width={600}
+          height={400}
           className="w-full h-full object-cover group-hover:scale-[1.06] transition-transform duration-700 ease-out"
-          onError={(e) => {
-            (e.target as HTMLImageElement).src = getPlaceImage(trip.destination || trip.title, "attraction", 600, 400);
-          }}
         />
         {/* legibility scrim */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/0 to-black/10" />

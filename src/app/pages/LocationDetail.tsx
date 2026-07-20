@@ -8,7 +8,7 @@ import { ArrowLeft, MapPin, Star, Clock, Wallet, Lightbulb, ExternalLink, Hotel,
 import Navbar from "@/components/Navbar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { TripItem } from "@/features/planning/trip-data";
-import { getPlaceImage } from "@/features/planning/place-image";
+import { getPlaceImage, optimizePlaceImageUrl } from "@/features/planning/place-image";
 import { usePlaceDetail } from "@/hooks/useApi";
 import ChipTripReviews from "@/features/location/components/ChipTripReviews";
 import SafeImage from "@/components/SafeImage";
@@ -183,8 +183,11 @@ const LocationDetail = () => {
             <div className="relative w-full h-full">
               <motion.img
                 key={activePhotoIndex}
-                src={safeImageUrl(activePhoto?.url, fallbackHeroImage)}
+                src={optimizePlaceImageUrl(safeImageUrl(activePhoto?.url, fallbackHeroImage), 1600, 1000)}
                 alt={`${displayTitle} - Ảnh ${activePhotoIndex + 1}`}
+                width={1600}
+                height={1000}
+                decoding="async"
                 initial={{ opacity: 0, scale: 1.05 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.4 }}
@@ -228,9 +231,18 @@ const LocationDetail = () => {
             </div>
           ) : (
             <SafeImage
-              src={item.image && item.image !== "/placeholder.svg" ? item.image : getPlaceImage(displayTitle, item.bookingType, 800, 500)}
+              src={optimizePlaceImageUrl(
+                item.image && item.image !== "/placeholder.svg"
+                  ? item.image
+                  : getPlaceImage(displayTitle, item.bookingType, 1600, 1000),
+                1600,
+                1000,
+              )}
               fallbackSrc={fallbackCardImage}
               alt={displayTitle}
+              width={1600}
+              height={1000}
+              loading="eager"
               className="w-full h-full object-cover object-[center_35%]"
             />
           )}
@@ -311,9 +323,11 @@ const LocationDetail = () => {
                       }`}
                     >
                       <SafeImage
-                        src={safeImageUrl(photo.thumbnail, fallbackThumbImage)}
+                        src={optimizePlaceImageUrl(safeImageUrl(photo.thumbnail, fallbackThumbImage), 160, 112)}
                         fallbackSrc={fallbackThumbImage}
                         alt=""
+                        width={80}
+                        height={56}
                         className="w-full h-full object-cover"
                         onError={() => markImageFailed(photo.thumbnail)}
                       />
@@ -532,8 +546,17 @@ const LocationDetail = () => {
           >
             <motion.img
               key={activePhotoIndex}
-              src={photos.length > 0 ? safeImageUrl(activePhoto?.url, fallbackHeroImage) : safeImageUrl(item.image && item.image !== "/placeholder.svg" ? item.image : null, fallbackHeroImage)}
+              src={optimizePlaceImageUrl(
+                photos.length > 0
+                  ? safeImageUrl(activePhoto?.url, fallbackHeroImage)
+                  : safeImageUrl(item.image && item.image !== "/placeholder.svg" ? item.image : null, fallbackHeroImage),
+                1600,
+                1200,
+              )}
               alt={`${displayTitle} — Ảnh ${activePhotoIndex + 1} / ${photos.length > 0 ? photos.length : 1}`}
+              width={1600}
+              height={1200}
+              decoding="async"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               style={{ transform: `scale(${zoomScale})`, transition: "transform 0.3s ease" }}
@@ -581,9 +604,11 @@ const LocationDetail = () => {
                     }`}
                   >
                     <SafeImage
-                      src={safeImageUrl(photo.thumbnail, fallbackThumbImage)}
+                      src={optimizePlaceImageUrl(safeImageUrl(photo.thumbnail, fallbackThumbImage), 160, 120)}
                       fallbackSrc={fallbackThumbImage}
                       alt=""
+                      width={64}
+                      height={48}
                       className="w-full h-full object-cover"
                       onError={() => markImageFailed(photo.thumbnail)}
                     />
